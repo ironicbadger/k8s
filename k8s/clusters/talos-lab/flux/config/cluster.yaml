@@ -1,0 +1,25 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: kubernetes-manifests
+  namespace: flux-system
+spec:
+  interval: 30m
+  url: "https://github.com/ironicbadger/talos-lab-terraform.git"
+  ref:
+    branch: "main"
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: cluster
+  namespace: flux-system
+spec:
+  interval: 30m
+  path: ./clusters/talos-lab/flux
+  prune: true
+  wait: false
+  sourceRef:
+    kind: GitRepository
+    name: talos-lab-terraform
