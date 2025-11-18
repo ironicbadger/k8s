@@ -1,0 +1,16 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: taloslab-flux-webhook
+  annotations:
+    tailscale.com/funnel: "true"
+spec:
+  defaultBackend:
+    service:
+      name: webhook-receiver
+      port:
+        number: 80
+  ingressClassName: tailscale
+  tls:
+    - hosts:
+        - taloslab-flux-webhook
