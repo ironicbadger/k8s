@@ -54,7 +54,7 @@ resource "proxmox_virtual_environment_vm" "control_plane" {
   agent {
     enabled = true
     type    = "virtio"
-    timeout = "15s"
+    timeout = "45s"
   }
 
   scsi_hardware = "virtio-scsi-single"
@@ -110,7 +110,7 @@ resource "proxmox_virtual_environment_vm" "worker" {
   agent {
     enabled = true
     type    = "virtio"
-    timeout = "15s"
+    timeout = "45s"
   }
 
   scsi_hardware = "virtio-scsi-single"
