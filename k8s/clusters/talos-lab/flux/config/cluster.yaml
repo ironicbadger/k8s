@@ -2,7 +2,7 @@
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: GitRepository
 metadata:
-  name: kubernetes-manifests
+  name: talos-lab-terraform
   namespace: flux-system
 spec:
   interval: 30m
@@ -17,9 +17,10 @@ metadata:
   namespace: flux-system
 spec:
   interval: 30m
-  path: ./clusters/talos-lab/flux
+  path: ./k8s/clusters/talos-lab/flux
   prune: true
   wait: false
   sourceRef:
     kind: GitRepository
     name: talos-lab-terraform
+    namespace: flux-system
