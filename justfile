@@ -24,10 +24,21 @@ nuke:
     terraform -chdir=terraform destroy -auto-approve -var-file="secrets.tfvars" -var="force_stop=true"
     rm -rf _out
 
-# Export environment variables (run with: eval "$(just env)")
+# Export environment variables - copy and run: eval "$(just env)"
 export:
+    @echo 'Run this command to export the variables:'
+    @echo ''
+    @echo 'eval "$(just env)"'
+
+# Output export commands (used by: eval "$(just env)")
+env:
     @echo 'export TALOSCONFIG=/Users/alex/git/ib/talos-lab-terraform/_out/talosconfig'
     @echo 'export KUBECONFIG=/Users/alex/git/ib/talos-lab-terraform/_out/kubeconfig'
+
+# Show cluster status
+status:
+    TALOSCONFIG=/Users/alex/git/ib/talos-lab-terraform/_out/talosconfig \
+    KUBECONFIG=/Users/alex/git/ib/talos-lab-terraform/_out/kubeconfig \
     kubectl get nodes
 
 # Full workflow hint
