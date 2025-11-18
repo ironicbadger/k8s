@@ -1,0 +1,9 @@
+# Terraform
+terraform/secrets.tfvars
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.backup
+terraform/.terraform.lock.hcl
+
+# Generated configs
+_out/
