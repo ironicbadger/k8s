@@ -103,3 +103,16 @@ variable "force_stop" {
   type        = bool
   default     = false
 }
+
+# Terraform Backend - Garage S3
+variable "terraform_garage_s3_keyid" {
+  description = "Garage S3 access key ID for Terraform backend"
+  type        = string
+  sensitive   = true
+}
+
+variable "terraform_garage_s3_secretkey" {
+  description = "Garage S3 secret key for Terraform backend"
+  type        = string
+  sensitive   = true
+}
