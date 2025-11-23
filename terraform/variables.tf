@@ -128,3 +128,20 @@ variable "subnet_mask" {
   type        = string
   default     = "24"
 }
+
+# Garage S3 Backend Credentials
+# These are only used via .envrc for backend authentication
+# They are not used in the Terraform configuration itself
+variable "terraform_garage_s3_keyid" {
+  description = "Garage S3 access key ID (loaded from secrets.tfvars, exported via .envrc)"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "terraform_garage_s3_secretkey" {
+  description = "Garage S3 secret key (loaded from secrets.tfvars, exported via .envrc)"
+  type        = string
+  default     = ""
+  sensitive   = true
+}

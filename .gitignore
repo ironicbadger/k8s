@@ -1,10 +1,10 @@
-# Terraform
+# Terraform/OpenTofu
 terraform/secrets.tfvars
 terraform/.terraform/
 terraform/*.tfstate
 terraform/*.tfstate.backup
 terraform/.terraform.lock.hcl
+terraform/.terraform.tfstate.lock.info
 
 # Generated configs
 _out/
-terraform/.terraform.tfstate.lock.info

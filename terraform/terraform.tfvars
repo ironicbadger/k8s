@@ -11,8 +11,8 @@ network_bridge = "vmbr0"
 talos_iso = "c137-isos:iso/talos-1.11.5-qemuguest-metal-amd64.iso"
 
 # Node Counts - Adjust to scale cluster
-cp_count     = 1
-worker_count = 1
+cp_count     = 3
+worker_count = 3
 
 # Control Plane Configuration
 control_plane = {
