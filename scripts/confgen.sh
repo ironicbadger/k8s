@@ -129,7 +129,7 @@ force_stop = ${PROXMOX_FORCE_STOP}
 EOF
 
 # Generate Terraform root configuration files from templates
-TEMPLATE_DIR="${PROJECT_ROOT}/templates/terraform"
+TEMPLATE_DIR="${SCRIPT_DIR}/templates/terraform"
 
 # Generate versions.tf
 sed -e "s|__CLUSTER_NAME__|${METADATA_NAME}|g" \

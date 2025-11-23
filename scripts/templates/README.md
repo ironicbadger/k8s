@@ -1,6 +1,6 @@
 # Configuration Templates
 
-This directory contains templates used by the `confgen.sh` script to generate cluster-specific configurations.
+This directory contains templates used by scripts in the parent directory to generate cluster-specific configurations.
 
 ## Terraform Templates
 
