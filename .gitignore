@@ -1,4 +1,4 @@
-# Terraform/OpenTofu
+# Terraform/OpenTofu (old structure)
 terraform/secrets.tfvars
 terraform/.terraform/
 terraform/*.tfstate
@@ -6,5 +6,25 @@ terraform/*.tfstate.backup
 terraform/.terraform.lock.hcl
 terraform/.terraform.tfstate.lock.info
 
-# Generated configs
+# Multi-cluster Terraform (new structure)
+clusters/*/terraform/secrets.tfvars
+clusters/*/terraform/.terraform/
+clusters/*/terraform/*.tfstate
+clusters/*/terraform/*.tfstate.backup
+clusters/*/terraform/.terraform.lock.hcl
+clusters/*/terraform/.terraform.tfstate.lock.info
+clusters/*/terraform/main.tf
+clusters/*/terraform/variables.tf
+clusters/*/terraform/outputs.tf
+clusters/*/terraform/terraform.tfvars
+
+# Talos configs (generated)
+clusters/*/talos/talconfig.yaml
+clusters/*/talos/talsecret.yaml
+clusters/*/talos/clusterconfig/
+
+# Old generated configs
 _out/
+talconfig.yaml
+talsecret.yaml
+clusterconfig/

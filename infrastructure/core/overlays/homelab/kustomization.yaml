@@ -1,0 +1,18 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base/cert-manager
+  - ../../base/ingress-nginx
+
+# Homelab-specific patches (minimal resources)
+patches:
+  - target:
+      kind: HelmRelease
+      name: ingress-nginx
+    patch: |-
+      - op: replace
+        path: /spec/values/controller/kind
+        value: DaemonSet
+      - op: add
+        path: /spec/values/controller/replicaCount
+        value: 1
