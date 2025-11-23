@@ -10,12 +10,23 @@ _cluster_dir cluster=cluster:
 _tf cluster=cluster *args:
     #!/usr/bin/env bash
     set -euo pipefail
+    PROJECT_ROOT="$(pwd)"
     CLUSTER_DIR="clusters/{{cluster}}/terraform"
     if [[ ! -d "${CLUSTER_DIR}" ]]; then
         echo "Error: Cluster '{{cluster}}' not found. Run: just confgen cluster={{cluster}}"
         exit 1
     fi
     cd "${CLUSTER_DIR}"
+
+    # Generate secrets.tfvars from encrypted secrets.sops.yaml
+    if [[ -f "${PROJECT_ROOT}/secrets.sops.yaml" ]]; then
+        sops -d --output-type json "${PROJECT_ROOT}/secrets.sops.yaml" | jq -r '
+            to_entries |
+            map("\(.key) = \"\(.value)\"") |
+            join("\n")
+        ' > secrets.tfvars
+    fi
+
     [[ -f .envrc ]] && source .envrc
     tofu {{args}}
 
@@ -152,7 +163,7 @@ workflow cluster=cluster:
     @echo "6. Verify: just status cluster={{cluster}}"
     @echo ""
     @echo "First time: just init cluster={{cluster}} (before create)"
-    @echo "          : cp terraform/secrets.tfvars clusters/{{cluster}}/terraform/"
+    @echo "          : Ensure secrets.sops.yaml exists in repo root"
     @echo ""
     @echo "Destroy: just nuke cluster={{cluster}} (or 'just nuke -a' to delete secrets)"
 
