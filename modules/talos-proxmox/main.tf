@@ -1,25 +1,18 @@
-provider "proxmox" {
-  endpoint  = var.proxmox_endpoint
-  api_token = var.proxmox_api_token
-  insecure  = var.proxmox_insecure
-
-  ssh {
-    agent = true
-  }
-}
+# Talos Kubernetes Cluster on Proxmox
+# Reusable module for creating Talos clusters
 
 # Control Plane Nodes
 resource "proxmox_virtual_environment_vm" "control_plane" {
   count = var.cp_count
 
-  name        = "talos-cp${count.index + 1}"
+  name        = "${var.cluster_name}-cp${count.index + 1}"
   description = "Talos Kubernetes Control Plane Node"
-  tags        = []
+  tags        = concat(["talos", "control-plane"], var.tags)
 
   node_name = var.proxmox_node
   vm_id     = var.vm_id_base + count.index
 
-  on_boot         = false
+  on_boot         = var.on_boot
   started         = true
   stop_on_destroy = var.force_stop
 
@@ -68,14 +61,14 @@ resource "proxmox_virtual_environment_vm" "control_plane" {
 resource "proxmox_virtual_environment_vm" "worker" {
   count = var.worker_count
 
-  name        = "talos-worker${count.index + 1}"
+  name        = "${var.cluster_name}-worker${count.index + 1}"
   description = "Talos Kubernetes Worker Node"
-  tags        = []
+  tags        = concat(["talos", "worker"], var.tags)
 
   node_name = var.proxmox_node
   vm_id     = var.vm_id_base + 10 + count.index
 
-  on_boot         = false
+  on_boot         = var.on_boot
   started         = true
   stop_on_destroy = var.force_stop
 

@@ -1,0 +1,5 @@
+creation_rules:
+  - path_regex: clusters/.*/talos/talsecret\.sops\.yaml$
+    pgp: 6636CBF9CE1DE1A8
+  - path_regex: secrets\.sops\.yaml$
+    pgp: 6636CBF9CE1DE1A8

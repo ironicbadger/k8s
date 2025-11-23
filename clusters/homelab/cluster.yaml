@@ -1,0 +1,70 @@
+# Unified Cluster Configuration
+# This file is the single source of truth for cluster infrastructure and configuration
+# It drives both Terraform (VMs) and Talos (Kubernetes) configuration
+
+metadata:
+  name: homelab
+  environment: dev
+  description: Homelab k8s cluster
+
+# Cluster topology - control plane and worker node counts and resources
+cluster:
+  talos:
+    version: v1.11.5
+    clusterName: talos-homelab
+    # Factory image schematic ID (includes qemu-guest-agent extension)
+    # Generate at: https://factory.talos.dev/?arch=amd64&extensions=siderolabs%2Fqemu-guest-agent&version=1.11.5
+    factorySchematic: ce4c980550dd2ab1b17bbf2b08801c7eb59418eafe8f279833297925d67c7515
+    installDisk: /dev/sda
+
+  topology:
+    controlPlane:
+      count: 3
+      resources:
+        cores: 4
+        memory: 8192  # MB
+        disk: 32      # GB
+
+    workers:
+      count: 3
+      resources:
+        cores: 8
+        memory: 16384  # MB
+        disk: 100      # GB
+
+# Proxmox infrastructure settings
+proxmox:
+  endpoint: https://px.wd.ktz.me/
+  node: ms01
+  insecure: false
+
+  storage:
+    datastore: local
+    isoPath: c137-isos:iso/talos-1.11.5-qemuguest-metal-amd64.iso
+
+  network:
+    bridge: vmbr0
+    # IP addressing handled via DHCP (IPs assigned by Proxmox/network)
+
+  vm:
+    idBase: 800      # Control planes: 800-809, Workers: 810-819
+    cpuType: x86-64-v2-AES
+    onBoot: false
+    forceStop: false  # Set to true for destructive operations
+
+# GitOps configuration (optional, for Flux bootstrap)
+gitops:
+  enabled: false
+  # When enabled, this cluster will bootstrap Flux and install infrastructure components
+  flux:
+    version: v2.2.0
+    repository: https://github.com/ironicbadger/k8s
+    branch: main
+    path: ./clusters/homelab
+
+  # Infrastructure components to install (from infrastructure/ directory)
+  infrastructure:
+    core:
+      - cert-manager
+      - ingress-nginx
+    optional: []
