@@ -20,11 +20,9 @@ clusters/*/terraform/terraform.tfvars
 
 # Talos configs (generated)
 clusters/*/talos/talconfig.yaml
-clusters/*/talos/talsecret.yaml
 clusters/*/talos/clusterconfig/
 
 # Old generated configs
 _out/
 talconfig.yaml
-talsecret.yaml
 clusterconfig/

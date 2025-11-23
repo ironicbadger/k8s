@@ -53,9 +53,9 @@ talgen cluster=cluster:
 
     ./scripts/sync-ips.sh {{cluster}}
 
-    if [[ ! -f "${TALOS_DIR}/talsecret.yaml" ]]; then
-        talhelper gensecret > "${TALOS_DIR}/talsecret.yaml"
-        echo "Generated talsecret.yaml - keep this file safe!"
+    if [[ ! -f "${TALOS_DIR}/talsecret.sops.yaml" ]]; then
+        talhelper gensecret | sops -e /dev/stdin > "${TALOS_DIR}/talsecret.sops.yaml"
+        echo "Generated encrypted talsecret.sops.yaml"
     fi
 
     cd "${TALOS_DIR}"
@@ -110,10 +110,10 @@ nuke cluster=cluster all="false":
 
     # Optionally delete secrets
     if [ "${DELETE_ALL}" = "true" ] || [ "${DELETE_ALL}" = "-a" ]; then
-        rm -rf ${TALOS_DIR}/talsecret.yaml
+        rm -rf ${TALOS_DIR}/talsecret.sops.yaml
         echo "Destroyed everything including secrets"
     else
-        echo "Destroyed (talsecret.yaml preserved - use 'just nuke -a' to delete)"
+        echo "Destroyed (talsecret.sops.yaml preserved - use 'just nuke -a' to delete)"
     fi
 
 # Watch cluster nodes (during bootstrap)
