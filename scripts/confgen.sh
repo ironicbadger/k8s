@@ -67,6 +67,19 @@ PROXMOX_CPU_TYPE=$(read_config '.proxmox.vm.cpuType')
 PROXMOX_ON_BOOT=$(read_config '.proxmox.vm.onBoot')
 PROXMOX_FORCE_STOP=$(read_config '.proxmox.vm.forceStop')
 
+# Read Terraform backend configuration
+BACKEND_CONFIG="${PROJECT_ROOT}/terraform-backend.yaml"
+if [[ -f "${BACKEND_CONFIG}" ]]; then
+  TF_BACKEND_BUCKET=$(yq -r '.backend.bucket' "${BACKEND_CONFIG}" 2>/dev/null || echo "terraform-state")
+  TF_BACKEND_ENDPOINT=$(yq -r '.backend.endpoint' "${BACKEND_CONFIG}" 2>/dev/null || echo "https://garage.ktz.ts.net:3900")
+  TF_BACKEND_REGION=$(yq -r '.backend.region' "${BACKEND_CONFIG}" 2>/dev/null || echo "garage")
+else
+  # Defaults if config file doesn't exist
+  TF_BACKEND_BUCKET="terraform-state"
+  TF_BACKEND_ENDPOINT="https://garage.ktz.ts.net:3900"
+  TF_BACKEND_REGION="garage"
+fi
+
 # Generate Terraform tfvars
 TERRAFORM_DIR="${CLUSTER_DIR}/terraform"
 TFVARS_FILE="${TERRAFORM_DIR}/terraform.tfvars"
@@ -115,10 +128,23 @@ on_boot    = ${PROXMOX_ON_BOOT}
 force_stop = ${PROXMOX_FORCE_STOP}
 EOF
 
-# Copy .envrc if it doesn't exist in cluster terraform dir
-if [[ ! -f "${TERRAFORM_DIR}/.envrc" ]] && [[ -f "${PROJECT_ROOT}/terraform/.envrc" ]]; then
-  cp "${PROJECT_ROOT}/terraform/.envrc" "${TERRAFORM_DIR}/.envrc"
-fi
+# Generate Terraform root configuration files from templates
+TEMPLATE_DIR="${PROJECT_ROOT}/templates/terraform"
+
+# Generate versions.tf
+sed -e "s|__CLUSTER_NAME__|${METADATA_NAME}|g" \
+    -e "s|__TERRAFORM_BACKEND_BUCKET__|${TF_BACKEND_BUCKET}|g" \
+    -e "s|__TERRAFORM_BACKEND_ENDPOINT__|${TF_BACKEND_ENDPOINT}|g" \
+    -e "s|__TERRAFORM_BACKEND_REGION__|${TF_BACKEND_REGION}|g" \
+    "${TEMPLATE_DIR}/versions.tf.tmpl" > "${TERRAFORM_DIR}/versions.tf"
+
+# Generate main.tf
+sed -e "s|__PROJECT_ROOT__|${PROJECT_ROOT}|g" \
+    "${TEMPLATE_DIR}/main.tf.tmpl" > "${TERRAFORM_DIR}/main.tf"
+
+# Copy variables.tf and outputs.tf (no substitutions needed)
+cp "${TEMPLATE_DIR}/variables.tf.tmpl" "${TERRAFORM_DIR}/variables.tf"
+cp "${TEMPLATE_DIR}/outputs.tf.tmpl" "${TERRAFORM_DIR}/outputs.tf"
 
 # Generate talconfig.yaml template (IPs will be synced after terraform apply)
 TALOS_DIR="${CLUSTER_DIR}/talos"

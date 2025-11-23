@@ -1,0 +1,29 @@
+output "control_plane_vms" {
+  description = "Control plane VM information"
+  value       = module.talos_cluster.control_plane_vms
+}
+
+output "worker_vms" {
+  description = "Worker VM information"
+  value       = module.talos_cluster.worker_vms
+}
+
+output "all_vm_ids" {
+  description = "All VM IDs for reference"
+  value       = module.talos_cluster.all_vm_ids
+}
+
+output "control_plane_ips" {
+  description = "List of control plane IP addresses"
+  value       = module.talos_cluster.control_plane_ips
+}
+
+output "worker_ips" {
+  description = "List of worker IP addresses"
+  value       = module.talos_cluster.worker_ips
+}
+
+output "cluster_endpoint" {
+  description = "Kubernetes API endpoint (first control plane IP)"
+  value       = module.talos_cluster.cluster_endpoint
+}

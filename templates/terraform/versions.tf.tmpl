@@ -1,0 +1,27 @@
+terraform {
+  required_version = ">= 1.0"
+
+  required_providers {
+    proxmox = {
+      source  = "bpg/proxmox"
+      version = ">= 0.70.0"
+    }
+  }
+
+  backend "s3" {
+    bucket = "__TERRAFORM_BACKEND_BUCKET__"
+    key    = "__CLUSTER_NAME__/terraform.tfstate"
+    region = "__TERRAFORM_BACKEND_REGION__"
+
+    endpoints = {
+      s3 = "__TERRAFORM_BACKEND_ENDPOINT__"
+    }
+
+    use_path_style              = true
+    skip_credentials_validation = true
+    skip_region_validation      = true
+    skip_requesting_account_id  = true
+    skip_metadata_api_check     = true
+    skip_s3_checksum            = true
+  }
+}

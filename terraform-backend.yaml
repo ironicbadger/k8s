@@ -1,0 +1,9 @@
+# Terraform S3 Backend Configuration
+# This file defines the S3-compatible backend for storing Terraform state
+# Credentials are stored in secrets.sops.yaml (terraform_garage_s3_keyid, terraform_garage_s3_secretkey)
+
+backend:
+  type: s3
+  bucket: terraform-state
+  endpoint: https://garage.ktz.ts.net:3900
+  region: garage

@@ -1,0 +1,32 @@
+provider "proxmox" {
+  endpoint  = var.proxmox_endpoint
+  api_token = var.proxmox_api_token
+  insecure  = var.proxmox_insecure
+
+  ssh {
+    agent = true
+  }
+}
+
+module "talos_cluster" {
+  source = "__PROJECT_ROOT__/modules/talos-proxmox"
+
+  cluster_name    = var.cluster_name
+  proxmox_node    = var.proxmox_node
+  storage         = var.storage
+  network_bridge  = var.network_bridge
+  talos_iso       = var.talos_iso
+
+  cp_count        = var.cp_count
+  worker_count    = var.worker_count
+
+  control_plane   = var.control_plane
+  worker          = var.worker
+
+  cpu_type        = var.cpu_type
+  vm_id_base      = var.vm_id_base
+  on_boot         = var.on_boot
+  force_stop      = var.force_stop
+
+  tags            = [var.environment]
+}

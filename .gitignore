@@ -15,6 +15,7 @@ clusters/*/terraform/.terraform.lock.hcl
 clusters/*/terraform/.terraform.tfstate.lock.info
 clusters/*/terraform/main.tf
 clusters/*/terraform/variables.tf
+clusters/*/terraform/versions.tf
 clusters/*/terraform/outputs.tf
 clusters/*/terraform/terraform.tfvars
 

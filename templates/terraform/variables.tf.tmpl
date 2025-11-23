@@ -1,0 +1,105 @@
+# Proxmox Connection
+variable "proxmox_endpoint" {
+  description = "Proxmox API endpoint URL"
+  type        = string
+}
+
+variable "proxmox_api_token" {
+  description = "Proxmox API token in format: user@realm!tokenid=token-value"
+  type        = string
+  sensitive   = true
+}
+
+variable "proxmox_insecure" {
+  description = "Skip TLS verification for Proxmox API"
+  type        = bool
+  default     = true
+}
+
+# Cluster Configuration
+variable "cluster_name" {
+  description = "Name of the cluster"
+  type        = string
+}
+
+variable "environment" {
+  description = "Environment (dev, staging, production)"
+  type        = string
+}
+
+# Proxmox Node Configuration
+variable "proxmox_node" {
+  description = "Proxmox node name for VM placement"
+  type        = string
+}
+
+variable "storage" {
+  description = "Storage datastore for VM disks"
+  type        = string
+}
+
+variable "network_bridge" {
+  description = "Network bridge for VM network interfaces"
+  type        = string
+}
+
+# Talos ISO Configuration
+variable "talos_iso" {
+  description = "Path to Talos ISO file (datastore:iso/filename)"
+  type        = string
+}
+
+# Node Counts
+variable "cp_count" {
+  description = "Number of control plane nodes"
+  type        = number
+}
+
+variable "worker_count" {
+  description = "Number of worker nodes"
+  type        = number
+}
+
+# Control Plane Configuration
+variable "control_plane" {
+  description = "Control plane node configuration"
+  type = object({
+    cores  = number
+    memory = number
+    disk   = number
+  })
+}
+
+# Worker Configuration
+variable "worker" {
+  description = "Worker node configuration"
+  type = object({
+    cores  = number
+    memory = number
+    disk   = number
+  })
+}
+
+# VM Configuration
+variable "cpu_type" {
+  description = "CPU type for VMs"
+  type        = string
+  default     = "x86-64-v2-AES"
+}
+
+variable "vm_id_base" {
+  description = "Base VM ID (control planes start here, workers offset by 10)"
+  type        = number
+}
+
+variable "on_boot" {
+  description = "Start VMs on Proxmox boot"
+  type        = bool
+  default     = false
+}
+
+variable "force_stop" {
+  description = "Force stop VMs on destroy (use for nuke)"
+  type        = bool
+  default     = false
+}
