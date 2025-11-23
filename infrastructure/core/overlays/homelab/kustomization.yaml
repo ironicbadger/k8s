@@ -3,6 +3,8 @@ kind: Kustomization
 resources:
   - ../../base/cert-manager
   - ../../base/ingress-nginx
+  - ../../base/tailscale
+  - tailscale-secret.sops.yaml
 
 # Homelab-specific patches (minimal resources)
 patches:
