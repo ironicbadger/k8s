@@ -19,10 +19,6 @@ if [[ ! -f "${CLUSTER_YAML}" ]]; then
   exit 1
 fi
 
-echo "🔄 Syncing configuration for cluster: ${CLUSTER_NAME}"
-echo "   Source: ${CLUSTER_YAML}"
-echo ""
-
 # Ensure required tools are installed
 for cmd in yq jq; do
   if ! command -v $cmd &> /dev/null; then
@@ -77,7 +73,6 @@ TFVARS_FILE="${TERRAFORM_DIR}/terraform.tfvars"
 
 mkdir -p "${TERRAFORM_DIR}"
 
-echo "📝 Generating Terraform configuration..."
 cat > "${TFVARS_FILE}" <<EOF
 # Auto-generated from ${CLUSTER_YAML}
 # DO NOT EDIT MANUALLY - run 'just sync cluster=${CLUSTER_NAME}' to regenerate
@@ -120,12 +115,9 @@ on_boot    = ${PROXMOX_ON_BOOT}
 force_stop = ${PROXMOX_FORCE_STOP}
 EOF
 
-echo "   ✅ Created: ${TFVARS_FILE}"
-
 # Copy .envrc if it doesn't exist in cluster terraform dir
 if [[ ! -f "${TERRAFORM_DIR}/.envrc" ]] && [[ -f "${PROJECT_ROOT}/terraform/.envrc" ]]; then
   cp "${PROJECT_ROOT}/terraform/.envrc" "${TERRAFORM_DIR}/.envrc"
-  echo "   ✅ Copied: ${TERRAFORM_DIR}/.envrc"
 fi
 
 # Generate talconfig.yaml template (IPs will be synced after terraform apply)
@@ -136,7 +128,6 @@ mkdir -p "${TALOS_DIR}"
 
 FACTORY_IMAGE="factory.talos.dev/installer/${TALOS_SCHEMATIC}:${TALOS_VERSION}"
 
-echo "📝 Generating Talos configuration template..."
 cat > "${TALCONFIG_FILE}" <<EOF
 # Auto-generated from ${CLUSTER_YAML}
 # IPs will be synced from Terraform state after 'terraform apply'
@@ -150,14 +141,4 @@ nodes: []
 # Run 'just sync-ips cluster=${CLUSTER_NAME}' after terraform apply to populate nodes
 EOF
 
-echo "   ✅ Created: ${TALCONFIG_FILE}"
-echo ""
-echo "✅ Configuration sync complete!"
-echo ""
-echo "Next steps:"
-echo "  1. Copy secrets.tfvars to ${TERRAFORM_DIR}/"
-echo "  2. just cluster=${CLUSTER_NAME} init     # Initialize Terraform"
-echo "  3. just cluster=${CLUSTER_NAME} apply    # Create VMs"
-echo "  4. just cluster=${CLUSTER_NAME} sync-ips # Sync IPs to talconfig.yaml"
-echo "  5. just cluster=${CLUSTER_NAME} talgen   # Generate Talos configs"
-echo "  6. just cluster=${CLUSTER_NAME} talos    # Bootstrap cluster"
+echo "✅ Generated configs for cluster: ${CLUSTER_NAME}"

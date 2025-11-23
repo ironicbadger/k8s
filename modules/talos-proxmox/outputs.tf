@@ -1,7 +1,7 @@
 output "control_plane_vms" {
   description = "Control plane VM information"
   value = {
-    for i, vm in proxmox_virtual_environment_vm.control_plane : vm.name => {
+    for vm in proxmox_virtual_environment_vm.control_plane : vm.name => {
       id   = vm.vm_id
       name = vm.name
       ip   = try([for ip in flatten(vm.ipv4_addresses) : ip if ip != "127.0.0.1"][0], "")
@@ -12,7 +12,7 @@ output "control_plane_vms" {
 output "worker_vms" {
   description = "Worker VM information"
   value = {
-    for i, vm in proxmox_virtual_environment_vm.worker : vm.name => {
+    for vm in proxmox_virtual_environment_vm.worker : vm.name => {
       id   = vm.vm_id
       name = vm.name
       ip   = try([for ip in flatten(vm.ipv4_addresses) : ip if ip != "127.0.0.1"][0], "")

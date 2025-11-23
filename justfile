@@ -1,6 +1,4 @@
 # Multi-Cluster Kubernetes Infrastructure Management
-# Uses unified cluster.yaml as single source of truth
-
 # Default cluster (override with: just cluster=prod <command>)
 cluster := "homelab"
 
@@ -14,27 +12,23 @@ _tf cluster=cluster *args:
     set -euo pipefail
     CLUSTER_DIR="clusters/{{cluster}}/terraform"
     if [[ ! -d "${CLUSTER_DIR}" ]]; then
-        echo "❌ Error: Cluster '{{cluster}}' not found or configs not generated"
-        echo "Run: just confgen cluster={{cluster}}"
+        echo "Error: Cluster '{{cluster}}' not found. Run: just confgen cluster={{cluster}}"
         exit 1
     fi
     cd "${CLUSTER_DIR}"
-    if [[ -f .envrc ]]; then
-        source .envrc
-    fi
+    [[ -f .envrc ]] && source .envrc
     tofu {{args}}
 
 # List available clusters
 list:
-    @echo "Available clusters:"
-    @ls -1 clusters/ 2>/dev/null || echo "  (none - run 'just confgen' to create from cluster.yaml)"
+    @ls -1 clusters/ 2>/dev/null || echo "No clusters found. Run 'just confgen' to create from cluster.yaml"
 
-# Generate cluster configuration from cluster.yaml (generates Terraform + Talos config templates)
+# Generate cluster configuration from cluster.yaml
 confgen cluster=cluster:
-    @echo "🔄 Generating configs for cluster: {{cluster}}"
     @./scripts/confgen.sh {{cluster}}
+    @echo "Next: just create"
 
-# Initialize Terraform for cluster
+# Initialize Terraform for cluster (first time only)
 init cluster=cluster:
     just _tf {{cluster}} init
 
@@ -44,12 +38,8 @@ plan cluster=cluster:
 
 # Create/update VMs with Terraform
 create cluster=cluster:
-    @echo "📦 Creating cluster: {{cluster}}"
     just _tf {{cluster}} apply -auto-approve -var-file=secrets.tfvars
-    @echo ""
-    @echo "✅ VMs created successfully!"
-    @echo ""
-    @echo "Next step: just talgen cluster={{cluster}}"
+    @echo "Next: just talgen"
 
 # Refresh Terraform state
 refresh cluster=cluster:
@@ -61,80 +51,69 @@ talgen cluster=cluster:
     set -euo pipefail
     TALOS_DIR="clusters/{{cluster}}/talos"
 
-    # First, sync IPs from Terraform state
-    echo "🔄 Syncing IP addresses from Terraform state..."
     ./scripts/sync-ips.sh {{cluster}}
-    echo ""
 
-    # Generate secrets if needed
     if [[ ! -f "${TALOS_DIR}/talsecret.yaml" ]]; then
-        echo "🔐 Generating talhelper secrets..."
         talhelper gensecret > "${TALOS_DIR}/talsecret.yaml"
-        echo "   ✅ Generated talsecret.yaml - keep this file safe!"
-        echo ""
+        echo "Generated talsecret.yaml - keep this file safe!"
     fi
 
-    echo "⚙️  Generating Talos configs..."
     cd "${TALOS_DIR}"
     talhelper genconfig
-    echo ""
-    echo "✅ Generated configs in ${TALOS_DIR}/clusterconfig/"
-    echo ""
-    echo "Next step: just bootstrap cluster={{cluster}}"
+    echo "Next: just bootstrap"
 
 # Bootstrap Talos cluster
 talos cluster=cluster:
     #!/usr/bin/env bash
     set -euo pipefail
+    PROJECT_ROOT="$(pwd)"
     TALOS_DIR="clusters/{{cluster}}/talos"
 
     if [[ ! -d "${TALOS_DIR}/clusterconfig" ]]; then
-        echo "❌ Error: Talos configs not found"
-        echo "Run: just talgen cluster={{cluster}}"
+        echo "Error: Talos configs not found. Run: just talgen cluster={{cluster}}"
         exit 1
     fi
 
-    echo "🚀 Bootstrapping Talos cluster: {{cluster}}"
     cd "${TALOS_DIR}"
+    "${PROJECT_ROOT}/scripts/talos-apply.sh"
 
-    # Use the existing talos-apply.sh script (relative to project root)
-    ../../scripts/talos-apply.sh
-
-    echo ""
-    echo "✅ Cluster bootstrap complete!"
-    echo ""
-    echo "Export config:"
-    echo "  export TALOSCONFIG=$(pwd)/clusterconfig/talosconfig"
-    echo "  export KUBECONFIG=$(pwd)/clusterconfig/kubeconfig"
+    echo "export TALOSCONFIG=$(pwd)/clusterconfig/talosconfig"
+    echo "export KUBECONFIG=$(pwd)/clusterconfig/kubeconfig"
 
 # Alias for talos
 alias bootstrap := talos
 
 # Destroy cluster infrastructure
-nuke cluster=cluster *args:
-    @echo "💣 Destroying cluster: {{cluster}}"
-    @echo ""
-    @read -p "Are you sure you want to destroy cluster '{{cluster}}'? (yes/no): " confirm; \
-    if [ "$confirm" != "yes" ]; then \
-        echo "Aborted."; \
-        exit 1; \
+nuke cluster=cluster all="false":
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    # Parse arguments: handle -a as both cluster name and delete-all flag
+    CLUSTER="{{cluster}}"
+    DELETE_ALL="{{all}}"
+    if [ "${CLUSTER}" = "-a" ]; then
+        CLUSTER="{{cluster}}"  # Use default cluster variable
+        DELETE_ALL="true"
     fi
-    @echo ""
-    @echo "💣 Forcing shutdown of all VMs..."
-    -just _tf {{cluster}} "apply -auto-approve -var-file=secrets.tfvars -var=force_stop=true" 2>/dev/null || true
-    @echo "🗑️  Destroying infrastructure..."
-    just _tf {{cluster}} "destroy -auto-approve -var-file=secrets.tfvars -var=force_stop=true"
-    @echo ""
-    @if echo "{{args}}" | grep -qE "(--all|-a)"; then \
-        echo "🧹 Cleaning up ALL configs including secrets..."; \
-        rm -rf clusters/{{cluster}}/talos/clusterconfig clusters/{{cluster}}/talos/talconfig.yaml clusters/{{cluster}}/talos/talsecret.yaml; \
-        echo "✅ Everything destroyed - full clean slate!"; \
-    else \
-        echo "🧹 Cleaning up generated configs..."; \
-        rm -rf clusters/{{cluster}}/talos/clusterconfig clusters/{{cluster}}/talos/talconfig.yaml; \
-        echo "✅ Infrastructure destroyed and configs cleaned up"; \
-        echo ""; \
-        echo "Note: talsecret.yaml was preserved - use 'just nuke cluster={{cluster}} --all' to delete it too"; \
+
+    # Confirm destruction
+    read -p "Destroy cluster '${CLUSTER}'? (yes/no): " confirm
+    [ "$confirm" = "yes" ] || { echo "Aborted."; exit 1; }
+
+    # Stop and destroy VMs
+    just _tf ${CLUSTER} "apply -auto-approve -var-file=secrets.tfvars -var=force_stop=true" 2>/dev/null || true
+    just _tf ${CLUSTER} "destroy -auto-approve -var-file=secrets.tfvars -var=force_stop=true"
+
+    # Clean up generated configs
+    TALOS_DIR="clusters/${CLUSTER}/talos"
+    rm -rf ${TALOS_DIR}/clusterconfig ${TALOS_DIR}/talconfig.yaml
+
+    # Optionally delete secrets
+    if [ "${DELETE_ALL}" = "true" ] || [ "${DELETE_ALL}" = "-a" ]; then
+        rm -rf ${TALOS_DIR}/talsecret.yaml
+        echo "Destroyed everything including secrets"
+    else
+        echo "Destroyed (talsecret.yaml preserved - use 'just nuke -a' to delete)"
     fi
 
 # Watch cluster nodes (during bootstrap)
@@ -142,11 +121,9 @@ watch cluster=cluster:
     #!/usr/bin/env bash
     KUBECONFIG="clusters/{{cluster}}/talos/clusterconfig/kubeconfig"
     if [[ ! -f "${KUBECONFIG}" ]]; then
-        echo "❌ Error: kubeconfig not found"
-        echo "Run 'just talos cluster={{cluster}}' first to bootstrap the cluster"
+        echo "Error: kubeconfig not found. Run: just talos cluster={{cluster}}"
         exit 1
     fi
-    echo "👀 Watching cluster nodes (Ctrl+C to stop)..."
     KUBECONFIG="${KUBECONFIG}" watch -n 2 kubectl get nodes
 
 # Show cluster status
@@ -154,8 +131,7 @@ status cluster=cluster:
     #!/usr/bin/env bash
     KUBECONFIG="clusters/{{cluster}}/talos/clusterconfig/kubeconfig"
     if [[ ! -f "${KUBECONFIG}" ]]; then
-        echo "❌ Error: kubeconfig not found"
-        echo "Cluster {{cluster}} is not bootstrapped yet"
+        echo "Error: Cluster {{cluster}} not bootstrapped"
         exit 1
     fi
     echo "Cluster: {{cluster}}"
@@ -166,56 +142,38 @@ status cluster=cluster:
 
 # Full workflow guide
 workflow cluster=cluster:
-    @echo "Complete workflow for cluster: {{cluster}}"
+    @echo "Workflow for cluster: {{cluster}}"
     @echo ""
-    @echo "1. Edit cluster configuration:"
-    @echo "   vim clusters/{{cluster}}/cluster.yaml"
+    @echo "1. Edit: clusters/{{cluster}}/cluster.yaml"
+    @echo "2. Generate: just confgen cluster={{cluster}}"
+    @echo "3. Deploy: just create cluster={{cluster}}"
+    @echo "4. Configure: just talgen cluster={{cluster}}"
+    @echo "5. Bootstrap: just bootstrap cluster={{cluster}}"
+    @echo "6. Verify: just status cluster={{cluster}}"
     @echo ""
-    @echo "2. Copy secrets (first time only):"
-    @echo "   cp terraform/secrets.tfvars clusters/{{cluster}}/terraform/"
+    @echo "First time: just init cluster={{cluster}} (before create)"
+    @echo "          : cp terraform/secrets.tfvars clusters/{{cluster}}/terraform/"
     @echo ""
-    @echo "3. Generate configs from cluster.yaml:"
-    @echo "   just confgen cluster={{cluster}}"
-    @echo ""
-    @echo "4. Initialize Terraform (first time only):"
-    @echo "   just init cluster={{cluster}}"
-    @echo ""
-    @echo "5. Deploy infrastructure:"
-    @echo "   just create cluster={{cluster}}"
-    @echo ""
-    @echo "6. Generate Talos configs and bootstrap:"
-    @echo "   just talgen cluster={{cluster}}      # Syncs IPs + generates configs"
-    @echo "   just bootstrap cluster={{cluster}}   # Bootstrap Kubernetes"
-    @echo ""
-    @echo "7. Verify cluster:"
-    @echo "   just status cluster={{cluster}}      # Show nodes and pods"
-    @echo "   just watch cluster={{cluster}}       # Watch nodes"
-    @echo ""
-    @echo "To destroy:"
-    @echo "   just nuke cluster={{cluster}}        # Destroy (keep secrets)"
-    @echo "   just nuke cluster={{cluster}} -a     # Destroy everything"
+    @echo "Destroy: just nuke cluster={{cluster}} (or 'just nuke -a' to delete secrets)"
 
 # Show help
 help:
-    @echo "Kubernetes Multi-Cluster Infrastructure Manager"
+    @echo "Kubernetes Multi-Cluster Infrastructure"
     @echo ""
-    @echo "Single source of truth: clusters/<name>/cluster.yaml"
+    @echo "Typical workflow:"
+    @echo "  just confgen      Generate configs from cluster.yaml"
+    @echo "  just create       Deploy VMs"
+    @echo "  just talgen       Generate Talos configs"
+    @echo "  just bootstrap    Bootstrap Kubernetes"
+    @echo "  just status       Verify cluster"
     @echo ""
-    @echo "Commands:"
-    @echo "  just list                            List available clusters"
-    @echo "  just confgen [cluster=NAME]          Generate configs from cluster.yaml"
-    @echo "  just init [cluster=NAME]             Initialize Terraform"
-    @echo "  just create [cluster=NAME]           Create/update VMs"
-    @echo "  just talgen [cluster=NAME]           Generate Talos configs (syncs IPs)"
-    @echo "  just bootstrap [cluster=NAME]        Bootstrap Kubernetes cluster"
-    @echo "  just status [cluster=NAME]           Show cluster status"
-    @echo "  just watch [cluster=NAME]            Watch cluster nodes"
-    @echo "  just nuke [cluster=NAME] [--all]     Destroy cluster"
-    @echo "  just workflow [cluster=NAME]         Show complete workflow"
+    @echo "Other commands:"
+    @echo "  list              List clusters"
+    @echo "  init              Initialize Terraform (first time only)"
+    @echo "  plan              Show Terraform plan"
+    @echo "  watch             Watch nodes"
+    @echo "  nuke [-a]         Destroy cluster (-a deletes secrets)"
+    @echo "  workflow          Show detailed workflow"
     @echo ""
     @echo "Default cluster: {{cluster}}"
-    @echo ""
-    @echo "Examples:"
-    @echo "  just confgen                         Generate homelab configs"
-    @echo "  just cluster=prod create             Deploy prod cluster"
-    @echo "  just cluster=dev status              Check dev cluster status"
+    @echo "Override with: just cluster=NAME <command>"
