@@ -18,16 +18,22 @@ _tf cluster=cluster *args:
     fi
     cd "${CLUSTER_DIR}"
 
-    # Generate secrets.tfvars from encrypted secrets.sops.yaml
+    # Generate secrets.tfvars and set S3 backend credentials from encrypted secrets.sops.yaml
     if [[ -f "${PROJECT_ROOT}/secrets.sops.yaml" ]]; then
-        sops -d --output-type json "${PROJECT_ROOT}/secrets.sops.yaml" | jq -r '
+        SECRETS_JSON=$(sops -d --output-type json "${PROJECT_ROOT}/secrets.sops.yaml")
+
+        # Generate secrets.tfvars for Terraform variables
+        echo "$SECRETS_JSON" | jq -r '
             to_entries |
             map("\(.key) = \"\(.value)\"") |
             join("\n")
         ' > secrets.tfvars
+
+        # Export S3 backend credentials for Terraform
+        export AWS_ACCESS_KEY_ID=$(echo "$SECRETS_JSON" | jq -r '.terraform_garage_s3_keyid')
+        export AWS_SECRET_ACCESS_KEY=$(echo "$SECRETS_JSON" | jq -r '.terraform_garage_s3_secretkey')
     fi
 
-    [[ -f .envrc ]] && source .envrc
     tofu {{args}}
 
 # List available clusters
@@ -62,7 +68,7 @@ talgen cluster=cluster:
     set -euo pipefail
     TALOS_DIR="clusters/{{cluster}}/talos"
 
-    ./scripts/sync-ips.sh {{cluster}}
+    ./scripts/gen-talconfig.sh {{cluster}}
 
     if [[ ! -f "${TALOS_DIR}/talsecret.sops.yaml" ]]; then
         talhelper gensecret | sops -e /dev/stdin > "${TALOS_DIR}/talsecret.sops.yaml"
@@ -95,17 +101,12 @@ talos cluster=cluster:
 alias bootstrap := talos
 
 # Destroy cluster infrastructure
-nuke cluster=cluster all="false":
+nuke all="false":
     #!/usr/bin/env bash
     set -euo pipefail
 
-    # Parse arguments: handle -a as both cluster name and delete-all flag
     CLUSTER="{{cluster}}"
     DELETE_ALL="{{all}}"
-    if [ "${CLUSTER}" = "-a" ]; then
-        CLUSTER="{{cluster}}"  # Use default cluster variable
-        DELETE_ALL="true"
-    fi
 
     # Confirm destruction
     read -p "Destroy cluster '${CLUSTER}'? (yes/no): " confirm
@@ -120,11 +121,11 @@ nuke cluster=cluster all="false":
     rm -rf ${TALOS_DIR}/clusterconfig ${TALOS_DIR}/talconfig.yaml
 
     # Optionally delete secrets
-    if [ "${DELETE_ALL}" = "true" ] || [ "${DELETE_ALL}" = "-a" ]; then
+    if [ "${DELETE_ALL}" = "true" ]; then
         rm -rf ${TALOS_DIR}/talsecret.sops.yaml
         echo "Destroyed everything including secrets"
     else
-        echo "Destroyed (talsecret.sops.yaml preserved - use 'just nuke -a' to delete)"
+        echo "Destroyed (talsecret.sops.yaml preserved - use 'just nuke all=true' to delete)"
     fi
 
 # Watch cluster nodes (during bootstrap)
@@ -165,13 +166,22 @@ workflow cluster=cluster:
     @echo "First time: just init cluster={{cluster}} (before create)"
     @echo "          : Ensure secrets.sops.yaml exists in repo root"
     @echo ""
-    @echo "Destroy: just nuke cluster={{cluster}} (or 'just nuke -a' to delete secrets)"
+    @echo "Destroy: just nuke (or 'just nuke all=true' to delete secrets)"
+
+# Build cluster from scratch (all steps in one command)
+fromscratch cluster=cluster:
+    just cluster={{cluster}} confgen
+    just cluster={{cluster}} init
+    just cluster={{cluster}} create
+    just cluster={{cluster}} talgen
+    just cluster={{cluster}} bootstrap
 
 # Show help
 help:
     @echo "Kubernetes Multi-Cluster Infrastructure"
     @echo ""
     @echo "Typical workflow:"
+    @echo "  just fromscratch  Build cluster from scratch (all steps)"
     @echo "  just confgen      Generate configs from cluster.yaml"
     @echo "  just create       Deploy VMs"
     @echo "  just talgen       Generate Talos configs"
@@ -183,7 +193,7 @@ help:
     @echo "  init              Initialize Terraform (first time only)"
     @echo "  plan              Show Terraform plan"
     @echo "  watch             Watch nodes"
-    @echo "  nuke [-a]         Destroy cluster (-a deletes secrets)"
+    @echo "  nuke [all=true]   Destroy cluster (all=true deletes secrets)"
     @echo "  workflow          Show detailed workflow"
     @echo ""
     @echo "Default cluster: {{cluster}}"

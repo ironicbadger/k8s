@@ -33,8 +33,8 @@ This infrastructure uses a **single source of truth** approach where everything 
                   ├──→ terraform apply
                   │    └──→ Creates VMs on Proxmox
                   │
-                  ├──→ sync-ips.sh
-                  │    └──→ Updates talconfig.yaml with actual IPs
+                  ├──→ gen-talconfig.sh
+                  │    └──→ Generates talconfig.yaml with IPs from Terraform
                   │
                   └──→ talhelper + talosctl
                        └──→ Bootstraps Kubernetes cluster
@@ -123,9 +123,8 @@ Terraform:
 ### 4. Bootstrap Kubernetes
 
 ```bash
-just sync-ips  # Get actual IPs from Terraform
-just talgen    # Generate Talos machine configs
-just talos     # Bootstrap cluster
+just talgen    # Generate Talos configs (syncs IPs from Terraform)
+just bootstrap # Bootstrap cluster
 ```
 
 ## Multi-Cluster Support
@@ -257,9 +256,9 @@ controlPlane:
 
 2. Apply:
 ```bash
-just sync      # Regenerates terraform.tfvars
-just apply     # Terraform creates 2 new VMs
-just sync-ips  # Updates talconfig with 3 nodes
+just confgen   # Regenerates terraform configs
+just create    # Terraform creates 2 new VMs
+just talgen    # Generates talconfig with 3 nodes
 ```
 
 ### Scenario 2: Add a Dev Cluster

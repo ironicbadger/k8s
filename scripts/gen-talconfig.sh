@@ -99,16 +99,15 @@ cat > "${TALCONFIG_FILE}" <<EOF
 clusterName: ${TALOS_CLUSTER_NAME}
 talosVersion: ${TALOS_VERSION}
 endpoint: https://${ENDPOINT_IP}:6443
-talosImageURL: ${FACTORY_IMAGE}
 
 nodes:
 EOF
 
 # Add control plane nodes
-echo "$CP_NODES" | jq -r '.[] | "  - hostname: \(.name)\n    ipAddress: \(.ip)\n    controlPlane: true\n    installDisk: '${TALOS_INSTALL_DISK}'\n    networkInterfaces:\n      - interface: eth0\n        dhcp: true\n"' >> "${TALCONFIG_FILE}"
+echo "$CP_NODES" | jq -r '.[] | "  - hostname: \(.name)\n    ipAddress: \(.ip)\n    controlPlane: true\n    installDisk: '${TALOS_INSTALL_DISK}'\n    schematic:\n      customization:\n        systemExtensions:\n          officialExtensions:\n            - siderolabs/qemu-guest-agent\n    networkInterfaces:\n      - interface: eth0\n        dhcp: true\n"' >> "${TALCONFIG_FILE}"
 
 # Add worker nodes
-echo "$WORKER_NODES" | jq -r '.[] | "  - hostname: \(.name)\n    ipAddress: \(.ip)\n    controlPlane: false\n    installDisk: '${TALOS_INSTALL_DISK}'\n    networkInterfaces:\n      - interface: eth0\n        dhcp: true\n"' >> "${TALCONFIG_FILE}"
+echo "$WORKER_NODES" | jq -r '.[] | "  - hostname: \(.name)\n    ipAddress: \(.ip)\n    controlPlane: false\n    installDisk: '${TALOS_INSTALL_DISK}'\n    schematic:\n      customization:\n        systemExtensions:\n          officialExtensions:\n            - siderolabs/qemu-guest-agent\n    networkInterfaces:\n      - interface: eth0\n        dhcp: true\n"' >> "${TALCONFIG_FILE}"
 
 echo "   ✅ Updated: ${TALCONFIG_FILE}"
 echo ""

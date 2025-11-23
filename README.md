@@ -41,8 +41,8 @@ From this one file, we generate:
 │   └── optional/                # Optional components
 │
 ├── scripts/                     # Automation scripts
-│   ├── sync-cluster.sh          # Generate configs from cluster.yaml
-│   ├── sync-ips.sh              # Sync IPs from Terraform to Talos
+│   ├── confgen.sh               # Generate configs from cluster.yaml
+│   ├── gen-talconfig.sh         # Generate talconfig.yaml from cluster.yaml + Terraform IPs
 │   └── talos-apply.sh           # Bootstrap Talos cluster
 │
 └── justfile                     # Command runner (just <command>)
@@ -99,8 +99,7 @@ just apply     # Create VMs
 ### 4. Bootstrap Kubernetes
 
 ```bash
-just sync-ips  # Sync IPs from Terraform to Talos config
-just talgen    # Generate Talos configs
+just talgen    # Generate Talos configs (syncs IPs automatically)
 just talos     # Bootstrap Kubernetes cluster
 ```
 
@@ -117,15 +116,15 @@ All commands support the `cluster=<name>` parameter (default: homelab):
 
 ```bash
 just list                          # List available clusters
-just sync [cluster=NAME]           # Sync config from cluster.yaml
+just confgen [cluster=NAME]        # Generate configs from cluster.yaml
 just init [cluster=NAME]           # Initialize Terraform
-just apply [cluster=NAME]          # Create/update VMs
-just sync-ips [cluster=NAME]       # Sync IPs to Talos config
-just talgen [cluster=NAME]         # Generate Talos configs
-just talos [cluster=NAME]          # Bootstrap cluster
+just create [cluster=NAME]         # Create/update VMs
+just talgen [cluster=NAME]         # Generate Talos configs (syncs IPs)
+just bootstrap [cluster=NAME]      # Bootstrap cluster
 just status [cluster=NAME]         # Show cluster status
 just watch [cluster=NAME]          # Watch cluster nodes
-just nuke [cluster=NAME] [--all]   # Destroy cluster
+just nuke [all=true]               # Destroy cluster (all=true deletes secrets)
+just fromscratch [cluster=NAME]    # Run all steps from scratch
 just workflow [cluster=NAME]       # Show complete workflow
 just help                          # Show all commands
 ```
@@ -164,29 +163,27 @@ proxmox:
 
 4. Deploy the new cluster:
 ```bash
-just cluster=prod sync
+just cluster=prod fromscratch
+# Or step by step:
+just cluster=prod confgen
 just cluster=prod init
-just cluster=prod apply
-just cluster=prod sync-ips
+just cluster=prod create
 just cluster=prod talgen
-just cluster=prod talos
+just cluster=prod bootstrap
 ```
 
 ### Managing Multiple Clusters
 
 ```bash
 # Deploy to different clusters
-just cluster=homelab apply
-just cluster=dev apply
-just cluster=prod apply
+just cluster=homelab create
+just cluster=dev create
+just cluster=prod create
 
 # Check status of all clusters
 just cluster=homelab status
 just cluster=dev status
 just cluster=prod status
-
-# Sync all clusters at once
-just sync-all
 ```
 
 ## Scaling a Cluster
@@ -203,11 +200,10 @@ cluster:
 
 2. Apply the change:
 ```bash
-just sync           # Regenerate Terraform configs
-just apply          # Terraform creates 2 new VMs
-just sync-ips       # Update Talos config with new IPs
-just talgen         # Regenerate Talos configs
-# Apply new configs to cluster...
+just confgen        # Regenerate Terraform configs
+just create         # Terraform creates 2 new VMs
+just talgen         # Regenerate Talos configs (syncs IPs)
+just bootstrap      # Apply new configs to cluster
 ```
 
 ## GitOps Integration (Future)
@@ -237,14 +233,15 @@ See [infrastructure/README.md](infrastructure/README.md) for details.
 ```
 cluster.yaml (edit this)
     │
-    ├─→ sync-cluster.sh
+    ├─→ confgen.sh
     │   ├─→ Generates terraform.tfvars
-    │   └─→ Generates talconfig.yaml template
+    │   ├─→ Generates variables.tf
+    │   └─→ Generates main.tf
     │
     ├─→ terraform apply (creates VMs)
     │
-    ├─→ sync-ips.sh
-    │   └─→ Updates talconfig.yaml with actual IPs
+    ├─→ gen-talconfig.sh
+    │   └─→ Generates talconfig.yaml with IPs from Terraform
     │
     └─→ talhelper + talosctl
         └─→ Bootstraps Kubernetes cluster
