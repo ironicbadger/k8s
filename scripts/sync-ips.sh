@@ -72,11 +72,18 @@ echo "   Control Plane nodes: $(echo "$CP_NODES" | jq -r '.[].name' | tr '\n' ' 
 echo "   Worker nodes: $(echo "$WORKER_NODES" | jq -r '.[].name' | tr '\n' ' ')"
 echo "   Cluster endpoint: ${ENDPOINT_IP}"
 
-# Read Talos config from cluster.yaml
-TALOS_VERSION=$(yq eval '.cluster.talos.version' "${CLUSTER_YAML}")
-TALOS_CLUSTER_NAME=$(yq eval '.cluster.talos.clusterName' "${CLUSTER_YAML}")
-TALOS_SCHEMATIC=$(yq eval '.cluster.talos.factorySchematic' "${CLUSTER_YAML}")
-TALOS_INSTALL_DISK=$(yq eval '.cluster.talos.installDisk' "${CLUSTER_YAML}")
+# Read Talos config from cluster.yaml (supports both yq versions)
+read_config() {
+  if yq eval "$1" "${CLUSTER_YAML}" 2>/dev/null; then
+    return 0
+  fi
+  yq -r "$1" "${CLUSTER_YAML}" 2>/dev/null || echo ""
+}
+
+TALOS_VERSION=$(read_config '.cluster.talos.version')
+TALOS_CLUSTER_NAME=$(read_config '.cluster.talos.clusterName')
+TALOS_SCHEMATIC=$(read_config '.cluster.talos.factorySchematic')
+TALOS_INSTALL_DISK=$(read_config '.cluster.talos.installDisk')
 
 FACTORY_IMAGE="factory.talos.dev/installer/${TALOS_SCHEMATIC}:${TALOS_VERSION}"
 

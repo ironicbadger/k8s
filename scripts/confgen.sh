@@ -31,9 +31,14 @@ for cmd in yq jq; do
   fi
 done
 
-# Read values from cluster.yaml using yq
+# Read values from cluster.yaml using yq (supports both mikefarah/yq and kislyuk/yq)
 read_config() {
-  yq eval "$1" "${CLUSTER_YAML}"
+  # Try mikefarah/yq syntax first (yq eval '.path' file)
+  if yq eval "$1" "${CLUSTER_YAML}" 2>/dev/null; then
+    return 0
+  fi
+  # Fall back to kislyuk/yq syntax (yq '.path' file)
+  yq -r "$1" "${CLUSTER_YAML}" 2>/dev/null || echo ""
 }
 
 # Extract configuration

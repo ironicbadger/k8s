@@ -14,8 +14,8 @@ _tf cluster=cluster *args:
     set -euo pipefail
     CLUSTER_DIR="clusters/{{cluster}}/terraform"
     if [[ ! -d "${CLUSTER_DIR}" ]]; then
-        echo "❌ Error: Cluster '{{cluster}}' not found or not synced"
-        echo "Run: just sync cluster={{cluster}}"
+        echo "❌ Error: Cluster '{{cluster}}' not found or configs not generated"
+        echo "Run: just confgen cluster={{cluster}}"
         exit 1
     fi
     cd "${CLUSTER_DIR}"
@@ -27,25 +27,15 @@ _tf cluster=cluster *args:
 # List available clusters
 list:
     @echo "Available clusters:"
-    @ls -1 clusters/ 2>/dev/null || echo "  (none - run 'just sync' to create from cluster.yaml)"
+    @ls -1 clusters/ 2>/dev/null || echo "  (none - run 'just confgen' to create from cluster.yaml)"
 
-# Sync cluster configuration from cluster.yaml (generates Terraform + Talos config templates)
-sync cluster=cluster:
-    @echo "🔄 Syncing cluster: {{cluster}}"
-    @./scripts/sync-cluster.sh {{cluster}}
-
-# Sync all clusters
-sync-all:
-    #!/usr/bin/env bash
-    for cluster_dir in clusters/*/; do
-        cluster=$(basename "$cluster_dir")
-        echo "🔄 Syncing ${cluster}..."
-        just sync cluster="${cluster}"
-        echo ""
-    done
+# Generate cluster configuration from cluster.yaml (generates Terraform + Talos config templates)
+confgen cluster=cluster:
+    @echo "🔄 Generating configs for cluster: {{cluster}}"
+    @./scripts/confgen.sh {{cluster}}
 
 # Initialize Terraform for cluster
-init cluster=cluster: (sync cluster)
+init cluster=cluster:
     just _tf {{cluster}} init
 
 # Show Terraform plan
@@ -53,36 +43,28 @@ plan cluster=cluster:
     just _tf {{cluster}} plan -var-file=secrets.tfvars
 
 # Create/update VMs with Terraform
-apply cluster=cluster:
-    @echo "📦 Deploying cluster: {{cluster}}"
+create cluster=cluster:
+    @echo "📦 Creating cluster: {{cluster}}"
     just _tf {{cluster}} apply -auto-approve -var-file=secrets.tfvars
     @echo ""
     @echo "✅ VMs created successfully!"
     @echo ""
-    @echo "Next step: just sync-ips cluster={{cluster}}"
-
-# Alias for apply
-alias create := apply
+    @echo "Next step: just talgen cluster={{cluster}}"
 
 # Refresh Terraform state
 refresh cluster=cluster:
     just _tf {{cluster}} refresh -var-file=secrets.tfvars
 
-# Sync IP addresses from Terraform state to talconfig.yaml
-sync-ips cluster=cluster:
-    @./scripts/sync-ips.sh {{cluster}}
-
-# Generate talhelper configs (after sync-ips)
+# Generate Talos configs (syncs IPs from Terraform, then generates configs)
 talgen cluster=cluster:
     #!/usr/bin/env bash
     set -euo pipefail
     TALOS_DIR="clusters/{{cluster}}/talos"
 
-    if [[ ! -f "${TALOS_DIR}/talconfig.yaml" ]]; then
-        echo "❌ Error: talconfig.yaml not found"
-        echo "Run: just sync-ips cluster={{cluster}}"
-        exit 1
-    fi
+    # First, sync IPs from Terraform state
+    echo "🔄 Syncing IP addresses from Terraform state..."
+    ./scripts/sync-ips.sh {{cluster}}
+    echo ""
 
     # Generate secrets if needed
     if [[ ! -f "${TALOS_DIR}/talsecret.yaml" ]]; then
@@ -98,9 +80,9 @@ talgen cluster=cluster:
     echo ""
     echo "✅ Generated configs in ${TALOS_DIR}/clusterconfig/"
     echo ""
-    echo "Next step: just talos cluster={{cluster}}"
+    echo "Next step: just bootstrap cluster={{cluster}}"
 
-# Apply Talos configuration and bootstrap cluster
+# Bootstrap Talos cluster
 talos cluster=cluster:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -124,6 +106,9 @@ talos cluster=cluster:
     echo "Export config:"
     echo "  export TALOSCONFIG=$(pwd)/clusterconfig/talosconfig"
     echo "  export KUBECONFIG=$(pwd)/clusterconfig/kubeconfig"
+
+# Alias for talos
+alias bootstrap := talos
 
 # Destroy cluster infrastructure
 nuke cluster=cluster *args:
@@ -186,28 +171,29 @@ workflow cluster=cluster:
     @echo "1. Edit cluster configuration:"
     @echo "   vim clusters/{{cluster}}/cluster.yaml"
     @echo ""
-    @echo "2. Sync configuration (generates Terraform + Talos templates):"
-    @echo "   just sync cluster={{cluster}}"
-    @echo ""
-    @echo "3. Copy secrets (first time only):"
+    @echo "2. Copy secrets (first time only):"
     @echo "   cp terraform/secrets.tfvars clusters/{{cluster}}/terraform/"
     @echo ""
-    @echo "4. Deploy infrastructure:"
-    @echo "   just init cluster={{cluster}}      # Initialize Terraform"
-    @echo "   just apply cluster={{cluster}}     # Create VMs"
+    @echo "3. Generate configs from cluster.yaml:"
+    @echo "   just confgen cluster={{cluster}}"
     @echo ""
-    @echo "5. Configure Kubernetes:"
-    @echo "   just sync-ips cluster={{cluster}}  # Sync IPs from Terraform"
-    @echo "   just talgen cluster={{cluster}}    # Generate Talos configs"
-    @echo "   just talos cluster={{cluster}}     # Bootstrap cluster"
+    @echo "4. Initialize Terraform (first time only):"
+    @echo "   just init cluster={{cluster}}"
     @echo ""
-    @echo "6. Verify cluster:"
-    @echo "   just status cluster={{cluster}}    # Show nodes and pods"
-    @echo "   just watch cluster={{cluster}}     # Watch nodes"
+    @echo "5. Deploy infrastructure:"
+    @echo "   just create cluster={{cluster}}"
+    @echo ""
+    @echo "6. Generate Talos configs and bootstrap:"
+    @echo "   just talgen cluster={{cluster}}      # Syncs IPs + generates configs"
+    @echo "   just bootstrap cluster={{cluster}}   # Bootstrap Kubernetes"
+    @echo ""
+    @echo "7. Verify cluster:"
+    @echo "   just status cluster={{cluster}}      # Show nodes and pods"
+    @echo "   just watch cluster={{cluster}}       # Watch nodes"
     @echo ""
     @echo "To destroy:"
-    @echo "   just nuke cluster={{cluster}}      # Destroy (keep secrets)"
-    @echo "   just nuke cluster={{cluster}} -a   # Destroy everything"
+    @echo "   just nuke cluster={{cluster}}        # Destroy (keep secrets)"
+    @echo "   just nuke cluster={{cluster}} -a     # Destroy everything"
 
 # Show help
 help:
@@ -216,21 +202,20 @@ help:
     @echo "Single source of truth: clusters/<name>/cluster.yaml"
     @echo ""
     @echo "Commands:"
-    @echo "  just list                          List available clusters"
-    @echo "  just sync [cluster=NAME]           Sync cluster config from cluster.yaml"
-    @echo "  just init [cluster=NAME]           Initialize Terraform"
-    @echo "  just apply [cluster=NAME]          Create/update VMs"
-    @echo "  just sync-ips [cluster=NAME]       Sync IPs to Talos config"
-    @echo "  just talgen [cluster=NAME]         Generate Talos configs"
-    @echo "  just talos [cluster=NAME]          Bootstrap Talos cluster"
-    @echo "  just status [cluster=NAME]         Show cluster status"
-    @echo "  just watch [cluster=NAME]          Watch cluster nodes"
-    @echo "  just nuke [cluster=NAME] [--all]   Destroy cluster"
-    @echo "  just workflow [cluster=NAME]       Show complete workflow"
+    @echo "  just list                            List available clusters"
+    @echo "  just confgen [cluster=NAME]          Generate configs from cluster.yaml"
+    @echo "  just init [cluster=NAME]             Initialize Terraform"
+    @echo "  just create [cluster=NAME]           Create/update VMs"
+    @echo "  just talgen [cluster=NAME]           Generate Talos configs (syncs IPs)"
+    @echo "  just bootstrap [cluster=NAME]        Bootstrap Kubernetes cluster"
+    @echo "  just status [cluster=NAME]           Show cluster status"
+    @echo "  just watch [cluster=NAME]            Watch cluster nodes"
+    @echo "  just nuke [cluster=NAME] [--all]     Destroy cluster"
+    @echo "  just workflow [cluster=NAME]         Show complete workflow"
     @echo ""
     @echo "Default cluster: {{cluster}}"
     @echo ""
     @echo "Examples:"
-    @echo "  just sync                          Sync homelab cluster"
-    @echo "  just cluster=prod apply            Deploy prod cluster"
-    @echo "  just cluster=dev status            Check dev cluster status"
+    @echo "  just confgen                         Generate homelab configs"
+    @echo "  just cluster=prod create             Deploy prod cluster"
+    @echo "  just cluster=dev status              Check dev cluster status"
