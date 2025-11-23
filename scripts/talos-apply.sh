@@ -45,9 +45,33 @@ if [ "$SKIP_BOOTSTRAP" = false ]; then
   echo "🔧 Applying configurations to nodes..."
   talhelper gencommand apply --extra-flags=--insecure | bash
 
-  # Wait for nodes to be ready and time to sync
-  echo "⏳ Waiting for nodes to be ready (60s)..."
-  sleep 60
+  # Wait for nodes to be ready with intelligent health checks
+  echo "⏳ Waiting for nodes to be ready..."
+
+  MAX_WAIT=120  # Maximum 2 minutes
+  ELAPSED=0
+  CHECK_INTERVAL=5
+
+  while [ $ELAPSED -lt $MAX_WAIT ]; do
+    # Check if we can connect to the first control plane node
+    if talosctl --talosconfig="${TALOSCONFIG}" version --insecure --nodes=$(talhelper gencommand bootstrap | grep -oP '(?<=--nodes )[^ ]+') &>/dev/null; then
+      echo "✅ Nodes responding after ${ELAPSED}s"
+      # Give a few more seconds for all services to stabilize
+      sleep 5
+      break
+    fi
+
+    echo -n "."
+    sleep $CHECK_INTERVAL
+    ELAPSED=$((ELAPSED + CHECK_INTERVAL))
+  done
+
+  if [ $ELAPSED -ge $MAX_WAIT ]; then
+    echo ""
+    echo "⚠️  Nodes didn't respond within ${MAX_WAIT}s, proceeding anyway..."
+  else
+    echo ""
+  fi
 
   # Bootstrap the cluster using the first control plane node with retries
   echo "🚀 Bootstrapping cluster..."
