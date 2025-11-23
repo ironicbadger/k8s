@@ -341,6 +341,53 @@ clusters/
 - Multi-cluster ready
 - Scalable architecture
 
+## Terraform State Backend (Garage S3)
+
+Terraform state is stored in a self-hosted Garage S3-compatible storage instance.
+
+### Configuration
+
+**Endpoint**: `https://garage.ktz.ts.net:3900`
+- Served via Tailscale with TLS (tailnet-only access)
+- S3 API port: 3900
+- Bucket: `terraform-state`
+
+**Credentials**:
+- Stored encrypted in `secrets.sops.yaml`:
+  - `terraform_garage_s3_keyid`
+  - `terraform_garage_s3_secretkey`
+- Automatically loaded as `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` by justfile
+
+**Backend Configuration** (in `clusters/*/terraform/main.tf`):
+```hcl
+backend "s3" {
+  bucket = "terraform-state"
+  key    = "homelab/terraform.tfstate"  # cluster-specific path
+  region = "garage"
+
+  endpoints = {
+    s3 = "https://garage.ktz.ts.net:3900"
+  }
+
+  use_path_style              = true  # Required for Garage S3 compatibility
+  skip_credentials_validation = true
+  skip_region_validation      = true
+  skip_requesting_account_id  = true
+  skip_metadata_api_check     = true
+  skip_s3_checksum            = true
+}
+```
+
+### Verifying Garage Access
+
+```bash
+# Check bucket exists
+ssh ironicbadger@ktz-cloud "docker exec ktz-garage /garage bucket list"
+
+# Check Tailscale serve config
+ssh ironicbadger@ktz-cloud "docker exec ktz-garage-ts tailscale serve status"
+```
+
 ## Future Enhancements
 
 ### Possible Additions:
