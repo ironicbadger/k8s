@@ -93,11 +93,51 @@ just cluster=prod fromscratch
 
 ## Secrets Management
 
-All secrets encrypted with SOPS (GPG key: `6636CBF9CE1DE1A8`):
+All secrets encrypted with [SOPS](https://github.com/mozilla/sops) using GPG (key: `6636CBF9CE1DE1A8`).
+
+Verify the key with `gpg --list-secret-keys 6636CBF9CE1DE1A8`.
+
+**Encrypted files:**
 - `secrets.sops.yaml` - Proxmox API tokens, S3 credentials
 - `clusters/*/talos/talsecret.sops.yaml` - Talos cluster secrets
 
 Scripts automatically decrypt during operations.
+
+### Multi-System Setup
+
+**Working on a new system:**
+
+1. **Import the GPG private key:**
+   ```bash
+   # Export from original system
+   gpg --export-secret-keys --armor 6636CBF9CE1DE1A8 > key.asc
+
+   # Import on new system
+   gpg --import key.asc
+   gpg --edit-key 6636CBF9CE1DE1A8
+   gpg> trust → 5 (ultimate) → quit
+   ```
+
+2. **Test decryption:**
+   ```bash
+   sops -d secrets.sops.yaml
+   ```
+
+**Adding team members:**
+
+Add their GPG key to `.sops.yaml` and re-encrypt:
+```bash
+# Multiple keys comma-separated
+echo 'creation_rules:
+  - pgp: 6636CBF9CE1DE1A8,THEIR_KEY_ID' > .sops.yaml
+
+sops updatekeys secrets.sops.yaml
+sops updatekeys clusters/*/talos/talsecret.sops.yaml
+```
+
+**Resources:**
+- [GPG key generation guide](https://docs.github.com/en/authentication/managing-commit-signature-verification/generating-a-new-gpg-key)
+- [SOPS documentation](https://github.com/mozilla/sops#usage)
 
 ## Requirements
 
