@@ -54,7 +54,7 @@ if [ "$SKIP_BOOTSTRAP" = false ]; then
 
   while [ $ELAPSED -lt $MAX_WAIT ]; do
     # Check if we can connect to the first control plane node
-    if talosctl --talosconfig="${TALOSCONFIG}" version --insecure --nodes=$(talhelper gencommand bootstrap | grep -oP '(?<=--nodes )[^ ]+') &>/dev/null; then
+    if talosctl --talosconfig="${TALOSCONFIG}" version --insecure --nodes=$(talhelper gencommand bootstrap | sed -n 's/.*--nodes \([^ ]*\).*/\1/p') &>/dev/null; then
       echo "✅ Nodes responding after ${ELAPSED}s"
       # Give a few more seconds for all services to stabilize
       sleep 5
