@@ -30,11 +30,11 @@ echo "🔄 Syncing IP addresses from Terraform state..."
 echo "   Cluster: ${CLUSTER_NAME}"
 echo ""
 
-# Source S3 backend credentials if .envrc exists
-if [[ -f "${TERRAFORM_DIR}/.envrc" ]]; then
-  cd "${TERRAFORM_DIR}"
-  source .envrc
-  cd "${PROJECT_ROOT}"
+# Set S3 backend credentials from secrets.sops.yaml
+if [[ -f "${PROJECT_ROOT}/secrets.sops.yaml" ]]; then
+  SECRETS_JSON=$(sops -d --output-type json "${PROJECT_ROOT}/secrets.sops.yaml")
+  export AWS_ACCESS_KEY_ID=$(echo "$SECRETS_JSON" | jq -r '.terraform_garage_s3_keyid')
+  export AWS_SECRET_ACCESS_KEY=$(echo "$SECRETS_JSON" | jq -r '.terraform_garage_s3_secretkey')
 fi
 
 # Refresh Terraform state to get latest IPs
