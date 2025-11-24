@@ -1,0 +1,26 @@
+# Shared Flux bootstrap configuration for all clusters
+# This file is NOT tracked by Flux and should be applied manually during cluster bootstrap
+#
+# Usage:
+#   kubectl apply -k clusters/common/bootstrap/flux
+#
+# Note: This references the upstream Flux manifests directly to avoid
+# committing the large gotk-components.yaml file to the repository.
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  # Reference upstream Flux installation manifests at pinned version
+  - github.com/fluxcd/flux2/manifests/install?ref=v2.7.3
+
+# Remove default network policies for simplified homelab setup
+patches:
+  - patch: |-
+      $patch: delete
+      apiVersion: networking.k8s.io/v1
+      kind: NetworkPolicy
+      metadata:
+        name: not-used
+    target:
+      group: networking.k8s.io
+      kind: NetworkPolicy
