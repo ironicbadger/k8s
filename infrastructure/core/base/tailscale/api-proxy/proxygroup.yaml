@@ -1,0 +1,15 @@
+---
+apiVersion: tailscale.com/v1alpha1
+kind: ProxyGroup
+metadata:
+  name: homelab-api
+  namespace: tailscale
+spec:
+  type: kube-apiserver
+  replicas: 2
+  tags:
+    - "tag:k8s-operator"
+  kubeAPIServer:
+    # Use noauth mode - proxies requests without impersonation
+    # Switch to "auth" for identity-based impersonation via Tailscale
+    mode: noauth
