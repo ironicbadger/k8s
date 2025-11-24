@@ -1,7 +1,9 @@
 creation_rules:
   - path_regex: clusters/.*/talos/talsecret\.sops\.yaml$
+    age: age1d2vkk88dt8jsr5uxpndaytalrljrmrc2emeyt3da6gl6n807rvrqrvezyn
     pgp: 6636CBF9CE1DE1A8
   - path_regex: secrets\.sops\.yaml$
+    age: age1d2vkk88dt8jsr5uxpndaytalrljrmrc2emeyt3da6gl6n807rvrqrvezyn
     pgp: 6636CBF9CE1DE1A8
   - path_regex: infrastructure/.*\.sops\.yaml$
     age: age1d2vkk88dt8jsr5uxpndaytalrljrmrc2emeyt3da6gl6n807rvrqrvezyn
