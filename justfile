@@ -152,22 +152,6 @@ status cluster=cluster:
     echo ""
     KUBECONFIG="${KUBECONFIG}" kubectl get pods -A
 
-# Full workflow guide
-workflow cluster=cluster:
-    @echo "Workflow for cluster: {{cluster}}"
-    @echo ""
-    @echo "1. Edit: clusters/{{cluster}}/cluster.yaml"
-    @echo "2. Generate: just confgen cluster={{cluster}}"
-    @echo "3. Deploy: just create cluster={{cluster}}"
-    @echo "4. Configure: just talgen cluster={{cluster}}"
-    @echo "5. Bootstrap: just bootstrap cluster={{cluster}}"
-    @echo "6. Verify: just status cluster={{cluster}}"
-    @echo ""
-    @echo "First time: just init cluster={{cluster}} (before create)"
-    @echo "          : Ensure secrets.sops.yaml exists in repo root"
-    @echo ""
-    @echo "Destroy: just nuke (or 'just nuke all=true' to delete secrets)"
-
 # Build cluster from scratch (all steps in one command)
 fromscratch cluster=cluster:
     just cluster={{cluster}} confgen
