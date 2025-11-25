@@ -4,3 +4,4 @@ kind: Kustomization
 resources:
   - sources.yaml
   - infrastructure.yaml
+  - tailscale-api-proxy.yaml
