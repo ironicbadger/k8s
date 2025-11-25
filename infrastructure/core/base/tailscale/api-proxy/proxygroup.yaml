@@ -2,7 +2,7 @@
 apiVersion: tailscale.com/v1alpha1
 kind: ProxyGroup
 metadata:
-  name: homelab-k8s-api
+  name: homelab-k8s-api-banana
   namespace: tailscale
 spec:
   type: kube-apiserver
