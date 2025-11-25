@@ -129,6 +129,25 @@ ts-list:
 ts-cleanup:
     ./scripts/tailscale-cleanup.sh "${cluster}"
 
+# Show Tailscale operator and proxy status
+[no-cd]
+ts-status:
+    #!/usr/bin/env bash
+    KUBECONFIG="clusters/${cluster}/talos/clusterconfig/kubeconfig"
+    if [[ ! -f "${KUBECONFIG}" ]]; then
+        echo "Error: kubeconfig not found. Run: just c bootstrap"
+        exit 1
+    fi
+    export KUBECONFIG
+    echo "=== Tailscale Operator ==="
+    kubectl get pods -n tailscale
+    echo ""
+    echo "=== ProxyGroup Status ==="
+    kubectl get proxygroup -n tailscale 2>/dev/null || echo "No ProxyGroups found (CRD may not be installed yet)"
+    echo ""
+    echo "=== To configure kubectl for Tailscale access ==="
+    echo "  tailscale configure kubeconfig ${cluster}-k8s-api"
+
 # Watch cluster nodes
 [no-cd]
 watch:

@@ -33,9 +33,9 @@ spec:
       valuesKey: client_secret
       targetPath: oauth.clientSecret
   values:
-    # Enable API server proxy capability
+    # Enable API server proxy capability with impersonation for auth mode
     apiServerProxyConfig:
-      mode: "noauth"
+      mode: "true"
     # Enable all operator features
     operatorConfig:
       image:
