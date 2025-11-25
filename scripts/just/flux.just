@@ -2,9 +2,9 @@
 
 set shell := ["bash", "-euo", "pipefail", "-c"]
 
-# Bootstrap Flux GitOps
+# Bootstrap Flux GitOps (optionally specify branch, defaults to main)
 [no-cd]
-bootstrap:
+bootstrap branch="main":
     #!/usr/bin/env bash
     set -euo pipefail
     KUBECONFIG="clusters/${cluster}/talos/clusterconfig/kubeconfig"
@@ -24,20 +24,10 @@ bootstrap:
     echo "Waiting for kube-system pods..."
     kubectl wait --for=condition=Ready pods --all -n kube-system --timeout=120s
 
-    if ! gh auth status &>/dev/null; then
-        echo "Error: gh CLI not authenticated. Run: gh auth login"
-        exit 1
-    fi
-    export GITHUB_TOKEN=$(gh auth token)
-    flux bootstrap github \
-      --owner=ironicbadger \
-      --repository=k8s \
-      --branch=main \
-      --path=clusters/${cluster} \
-      --personal \
-      --timeout=2m
+    # Create flux-system namespace if it doesn't exist (for sops-age secret)
+    kubectl create namespace flux-system --dry-run=client -o yaml | kubectl apply -f -
 
-    # Create SOPS Age secret for decryption
+    # Create SOPS Age secret for decryption (before bootstrap so Flux can decrypt immediately)
     if ! kubectl get secret sops-age -n flux-system &>/dev/null; then
         AGE_KEY_FILE="${SOPS_AGE_KEY_FILE:-$HOME/.config/sops/age/keys.txt}"
         if [[ -f "${AGE_KEY_FILE}" ]]; then
@@ -54,6 +44,20 @@ bootstrap:
     else
         echo "sops-age secret already exists"
     fi
+
+    if ! gh auth status &>/dev/null; then
+        echo "Error: gh CLI not authenticated. Run: gh auth login"
+        exit 1
+    fi
+    export GITHUB_TOKEN=$(gh auth token)
+    echo "Bootstrapping Flux on branch: {{branch}}"
+    flux bootstrap github \
+      --owner=ironicbadger \
+      --repository=k8s \
+      --branch={{branch}} \
+      --path=clusters/${cluster} \
+      --personal \
+      --timeout=2m
 
 # Show Flux status
 [no-cd]

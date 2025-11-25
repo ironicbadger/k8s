@@ -19,14 +19,14 @@ cluster:
 
   topology:
     controlPlane:
-      count: 3
+      count: 1
       resources:
         cores: 4
         memory: 8192  # MB
         disk: 32      # GB
 
     workers:
-      count: 3
+      count: 1
       resources:
         cores: 8
         memory: 16384  # MB
