@@ -37,6 +37,24 @@ bootstrap:
       --personal \
       --timeout=2m
 
+    # Create SOPS Age secret for decryption
+    if ! kubectl get secret sops-age -n flux-system &>/dev/null; then
+        AGE_KEY_FILE="${SOPS_AGE_KEY_FILE:-$HOME/.config/sops/age/keys.txt}"
+        if [[ -f "${AGE_KEY_FILE}" ]]; then
+            echo "Creating sops-age secret from ${AGE_KEY_FILE}..."
+            kubectl create secret generic sops-age \
+                --namespace=flux-system \
+                --from-file=age.agekey="${AGE_KEY_FILE}"
+        else
+            echo ""
+            echo "Warning: Age key not found at ${AGE_KEY_FILE}"
+            echo "Set SOPS_AGE_KEY_FILE or create the secret manually:"
+            echo "  kubectl create secret generic sops-age -n flux-system --from-file=age.agekey=<path>"
+        fi
+    else
+        echo "sops-age secret already exists"
+    fi
+
 # Show Flux status
 [no-cd]
 status:
