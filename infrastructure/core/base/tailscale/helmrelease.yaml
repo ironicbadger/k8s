@@ -36,6 +36,7 @@ spec:
     # Enable API server proxy capability with impersonation for auth mode
     apiServerProxyConfig:
       mode: "true"
+      allowImpersonation: "true"
     # Enable all operator features
     operatorConfig:
       image:
