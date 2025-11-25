@@ -13,6 +13,17 @@ bootstrap:
         exit 1
     fi
     export KUBECONFIG
+
+    # Wait for API server
+    echo "Waiting for Kubernetes API..."
+    until kubectl get nodes &>/dev/null; do
+        sleep 2
+    done
+
+    # Wait for kube-system pods
+    echo "Waiting for kube-system pods..."
+    kubectl wait --for=condition=Ready pods --all -n kube-system --timeout=120s
+
     if ! gh auth status &>/dev/null; then
         echo "Error: gh CLI not authenticated. Run: gh auth login"
         exit 1
@@ -23,7 +34,8 @@ bootstrap:
       --repository=k8s \
       --branch=main \
       --path=clusters/${cluster} \
-      --personal
+      --personal \
+      --timeout=2m
 
 # Show Flux status
 [no-cd]
