@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Tailscale device cleanup script
-# Removes Tailscale devices matching a hostname pattern for cluster teardown
+# Tailscale cleanup script
+# Removes Tailscale devices and services matching a cluster name pattern
 #
 # Usage:
 #   ./scripts/tailscale-cleanup.sh <cluster-name> [--yes]
@@ -93,6 +93,36 @@ delete_device() {
     }
 }
 
+# List services matching the cluster pattern
+list_services() {
+    local response
+    response=$(curl -s -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+        "https://api.tailscale.com/api/v2/tailnet/-/services") || {
+        echo "Error: Failed to list services" >&2
+        return 1
+    }
+
+    # Filter vipServices by name containing cluster name
+    # Service names have "svc:" prefix (e.g., "svc:homelab-k8s-api")
+    # Returns: name (with svc: prefix), comment
+    echo "${response}" | jq -r --arg cluster "${CLUSTER}" '
+        .vipServices // [] | .[]
+        | select(.name | test($cluster; "i"))
+        | [.name, (.comment // "")]
+        | @tsv' 2>/dev/null || true
+}
+
+# Delete a service by name
+delete_service() {
+    local service_name="$1"
+
+    curl -s -X DELETE -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+        "https://api.tailscale.com/api/v2/tailnet/-/services/${service_name}" || {
+        echo "Warning: Failed to delete service ${service_name}" >&2
+        return 1
+    }
+}
+
 main() {
     echo "Tailscale Cleanup for cluster: ${CLUSTER}"
     echo ""
@@ -107,36 +137,56 @@ main() {
 
     # List matching devices
     echo "Searching for devices matching '${CLUSTER}'..."
-    echo ""
-
     local devices
     devices=$(list_devices)
 
-    if [[ -z "${devices}" ]]; then
-        echo "No Tailscale devices found matching '${CLUSTER}'"
+    # List matching services
+    echo "Searching for services matching '${CLUSTER}'..."
+    local services
+    services=$(list_services)
+    echo ""
+
+    # Check if anything to clean up
+    if [[ -z "${devices}" && -z "${services}" ]]; then
+        echo "No Tailscale devices or services found matching '${CLUSTER}'"
         exit 0
     fi
 
     # Display devices
-    echo "Found devices:"
-    echo "----------------------------------------"
-    printf "%-20s %-30s %-15s\n" "HOSTNAME" "MAGICNS NAME" "IP"
-    echo "----------------------------------------"
-    while IFS=$'\t' read -r id hostname name ip; do
-        printf "%-20s %-30s %-15s\n" "${hostname}" "${name}" "${ip}"
-    done <<< "${devices}"
-    echo "----------------------------------------"
-    echo ""
+    if [[ -n "${devices}" ]]; then
+        echo "Found devices:"
+        echo "----------------------------------------"
+        printf "%-20s %-30s %-15s\n" "HOSTNAME" "MAGICDNS NAME" "IP"
+        echo "----------------------------------------"
+        while IFS=$'\t' read -r id hostname name ip; do
+            printf "%-20s %-30s %-15s\n" "${hostname}" "${name}" "${ip}"
+        done <<< "${devices}"
+        echo "----------------------------------------"
+        local device_count
+        device_count=$(echo "${devices}" | wc -l | tr -d ' ')
+        echo "Total: ${device_count} device(s)"
+        echo ""
+    fi
 
-    # Count devices
-    local count
-    count=$(echo "${devices}" | wc -l | tr -d ' ')
-    echo "Total: ${count} device(s) will be deleted"
-    echo ""
+    # Display services
+    if [[ -n "${services}" ]]; then
+        echo "Found services:"
+        echo "----------------------------------------"
+        printf "%-30s %s\n" "SERVICE NAME" "COMMENT"
+        echo "----------------------------------------"
+        while IFS=$'\t' read -r name comment; do
+            printf "%-30s %s\n" "${name}" "${comment:-}"
+        done <<< "${services}"
+        echo "----------------------------------------"
+        local service_count
+        service_count=$(echo "${services}" | wc -l | tr -d ' ')
+        echo "Total: ${service_count} service(s)"
+        echo ""
+    fi
 
     # Confirm unless --yes flag
     if [[ "${SKIP_CONFIRM}" != "--yes" ]]; then
-        read -p "Delete these devices? (yes/no): " confirm
+        read -p "Delete these devices and services? (yes/no): " confirm
         if [[ "${confirm}" != "yes" ]]; then
             echo "Aborted."
             exit 0
@@ -144,12 +194,24 @@ main() {
     fi
 
     # Delete devices
-    echo ""
-    echo "Deleting devices..."
-    while IFS=$'\t' read -r id hostname name ip; do
-        echo "  Deleting ${hostname} (${id})..."
-        delete_device "${id}" && echo "    Done" || echo "    Failed"
-    done <<< "${devices}"
+    if [[ -n "${devices}" ]]; then
+        echo ""
+        echo "Deleting devices..."
+        while IFS=$'\t' read -r id hostname name ip; do
+            echo "  Deleting ${hostname} (${id})..."
+            delete_device "${id}" && echo "    Done" || echo "    Failed"
+        done <<< "${devices}"
+    fi
+
+    # Delete services
+    if [[ -n "${services}" ]]; then
+        echo ""
+        echo "Deleting services..."
+        while IFS=$'\t' read -r name comment; do
+            echo "  Deleting service ${name}..."
+            delete_service "${name}" && echo "    Done" || echo "    Failed"
+        done <<< "${services}"
+    fi
 
     echo ""
     echo "Tailscale cleanup complete."
