@@ -185,3 +185,26 @@ fromscratch:
     just cluster bootstrap
 
 alias fs := fromscratch
+
+# Sync local state from remote (for new laptop/fresh clone)
+[no-cd]
+statesync:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "Syncing local state for cluster: ${cluster}"
+    just cluster confgen
+    just cluster init
+    just cluster talgen
+
+    # Configure kubeconfig via Tailscale API proxy
+    PROXYGROUP_FILE="infrastructure/core/base/tailscale/api-proxy/proxygroup.yaml"
+    if [[ -f "${PROXYGROUP_FILE}" ]]; then
+        PROXYGROUP_NAME=$(yq -r '.metadata.name' "${PROXYGROUP_FILE}")
+        echo "Configuring kubeconfig via Tailscale (${PROXYGROUP_NAME})..."
+        tailscale configure kubeconfig "${PROXYGROUP_NAME}"
+    else
+        echo "Warning: ProxyGroup not found, skipping Tailscale kubeconfig setup"
+        echo "Run 'just cluster bootstrap' when on the local network"
+    fi
+    echo ""
+    echo "State sync complete."
