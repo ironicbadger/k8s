@@ -4,3 +4,4 @@ resources:
   - ../../base/cert-manager
   - ../../base/tailscale
   - tailscale-secret.sops.yaml
+  - tailscale-helmrelease.yaml
