@@ -5,3 +5,4 @@ resources:
   - ../../base/cert-manager
   - ../../base/tailscale
   - tailscale-secret.sops.yaml
+  - api-proxy.yaml

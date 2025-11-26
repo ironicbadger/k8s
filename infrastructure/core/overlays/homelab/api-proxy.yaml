@@ -10,6 +10,4 @@ spec:
   tags:
     - "tag:k8s-operator"
   kubeAPIServer:
-    # Use auth mode - Tailscale identity mapped to Kubernetes via ACL grants
-    # Your ACL grants map autogroup:member to system:masters group
     mode: auth
