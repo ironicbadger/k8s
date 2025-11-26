@@ -1,0 +1,17 @@
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: tailscale-api-proxy
+  namespace: flux-system
+spec:
+  interval: 10m0s
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./infrastructure/core/overlays/homelab/api-proxy
+  prune: true
+  wait: true
+  timeout: 5m0s
+  dependsOn:
+    - name: infrastructure
