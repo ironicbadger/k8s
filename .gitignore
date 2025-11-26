@@ -19,11 +19,14 @@ clusters/*/terraform/versions.tf
 clusters/*/terraform/outputs.tf
 clusters/*/terraform/terraform.tfvars
 
-# Talos configs (generated)
+# Talos configs (generated for Proxmox clusters)
 clusters/*/talos/talconfig.yaml
 clusters/*/talos/clusterconfig/
 
-# Old generated configs
+# Old generated configs (root level)
 _out/
 talconfig.yaml
 clusterconfig/
+
+# Exception: bare metal clusters have talconfig as source of truth
+!clusters/m720q/talos/talconfig.yaml

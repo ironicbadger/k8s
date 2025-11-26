@@ -3,10 +3,14 @@ export cluster := "homelab"
 
 mod cluster "scripts/just/cluster.just"
 mod flux "scripts/just/flux.just"
+mod baremetal "scripts/just/baremetal.just"
 
 # Shorthand wrappers (can't alias modules directly)
 c *args:
     @just cluster {{args}}
+
+bm *args:
+    @just baremetal {{args}}
 
 # List available clusters
 list:
@@ -15,8 +19,11 @@ list:
 # Show help
 help:
     @echo "Modules:"
-    @echo "  just cluster <cmd>  - Cluster provisioning"
-    @echo "  just flux <cmd>     - GitOps/Flux operations"
+    @echo "  just cluster <cmd>   - Cluster provisioning (Proxmox VMs)"
+    @echo "  just baremetal <cmd> - Bare metal cluster management"
+    @echo "  just flux <cmd>      - GitOps/Flux operations"
+    @echo ""
+    @echo "Aliases: c -> cluster, bm -> baremetal"
     @echo ""
     @echo "Run 'just --list cluster' or 'just --list flux' to see commands"
     @echo ""
