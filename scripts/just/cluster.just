@@ -90,8 +90,23 @@ nuke all="false":
     DELETE_ALL="{{all}}"
     read -p "Destroy cluster '${cluster}'? (yes/no): " confirm
     [ "$confirm" = "yes" ] || { echo "Aborted."; exit 1; }
+
+    # Start Tailscale cleanup in background (has its own confirmation)
+    echo ""
+    echo "=== Tailscale Cleanup ==="
+    ./scripts/tailscale-cleanup.sh "${cluster}" &
+    TS_PID=$!
+
+    # Run Terraform destroy in parallel
+    echo ""
+    echo "=== Proxmox/Terraform Cleanup ==="
     just cluster::_tf "apply -auto-approve -var-file=secrets.tfvars -var=force_stop=true" 2>/dev/null || true
     just cluster::_tf "destroy -auto-approve -var-file=secrets.tfvars -var=force_stop=true"
+
+    # Wait for Tailscale cleanup to complete
+    wait $TS_PID || echo "Warning: Tailscale cleanup may have failed"
+
+    # Clean up local configs
     TALOS_DIR="clusters/${cluster}/talos"
     rm -rf ${TALOS_DIR}/clusterconfig ${TALOS_DIR}/talconfig.yaml
     if [ "${DELETE_ALL}" = "true" ]; then
@@ -100,6 +115,38 @@ nuke all="false":
     else
         echo "Destroyed (talsecret.sops.yaml preserved)"
     fi
+
+# List Tailscale devices matching cluster
+[no-cd]
+ts-list:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    # Just list, don't delete (script will exit after listing if no confirmation)
+    ./scripts/tailscale-cleanup.sh "${cluster}" <<< "no" || true
+
+# Clean up Tailscale devices for cluster
+[no-cd]
+ts-cleanup:
+    ./scripts/tailscale-cleanup.sh "${cluster}"
+
+# Show Tailscale operator and proxy status
+[no-cd]
+ts-status:
+    #!/usr/bin/env bash
+    KUBECONFIG="clusters/${cluster}/talos/clusterconfig/kubeconfig"
+    if [[ ! -f "${KUBECONFIG}" ]]; then
+        echo "Error: kubeconfig not found. Run: just c bootstrap"
+        exit 1
+    fi
+    export KUBECONFIG
+    echo "=== Tailscale Operator ==="
+    kubectl get pods -n tailscale
+    echo ""
+    echo "=== ProxyGroup Status ==="
+    kubectl get proxygroup -n tailscale 2>/dev/null || echo "No ProxyGroups found (CRD may not be installed yet)"
+    echo ""
+    echo "=== To configure kubectl for Tailscale access ==="
+    echo "  tailscale configure kubeconfig ${cluster}-k8s-api"
 
 # Watch cluster nodes
 [no-cd]
@@ -138,3 +185,26 @@ fromscratch:
     just cluster bootstrap
 
 alias fs := fromscratch
+
+# Sync local state from remote (for new laptop/fresh clone)
+[no-cd]
+statesync:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "Syncing local state for cluster: ${cluster}"
+    just cluster confgen
+    just cluster init
+    just cluster talgen
+
+    # Configure kubeconfig via Tailscale API proxy
+    PROXYGROUP_FILE="infrastructure/core/base/tailscale/api-proxy/proxygroup.yaml"
+    if [[ -f "${PROXYGROUP_FILE}" ]]; then
+        PROXYGROUP_NAME=$(yq -r '.metadata.name' "${PROXYGROUP_FILE}")
+        echo "Configuring kubeconfig via Tailscale (${PROXYGROUP_NAME})..."
+        tailscale configure kubeconfig "${PROXYGROUP_NAME}"
+    else
+        echo "Warning: ProxyGroup not found, skipping Tailscale kubeconfig setup"
+        echo "Run 'just cluster bootstrap' when on the local network"
+    fi
+    echo ""
+    echo "State sync complete."

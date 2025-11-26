@@ -123,6 +123,12 @@ Scripts automatically decrypt during operations.
    sops -d secrets.sops.yaml
    ```
 
+3. **Sync local state:**
+   ```bash
+   just cluster statesync
+   ```
+   This regenerates gitignored files (talconfig.yaml, kubeconfig, etc.) from remote Terraform state.
+
 **Adding team members:**
 
 Add their GPG key to `.sops.yaml` and re-encrypt:

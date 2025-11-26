@@ -1,0 +1,45 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: tailscale-operator
+  namespace: tailscale
+spec:
+  interval: 30m
+  chart:
+    spec:
+      chart: tailscale-operator
+      version: "1.90.x"
+      sourceRef:
+        kind: HelmRepository
+        name: tailscale
+        namespace: flux-system
+      interval: 12h
+  install:
+    crds: Create
+    remediation:
+      retries: 3
+  upgrade:
+    crds: CreateReplace
+    remediation:
+      retries: 3
+  valuesFrom:
+    - kind: Secret
+      name: tailscale-oauth
+      valuesKey: client_id
+      targetPath: oauth.clientId
+    - kind: Secret
+      name: tailscale-oauth
+      valuesKey: client_secret
+      targetPath: oauth.clientSecret
+  values:
+    # Enable API server proxy capability with impersonation for auth mode
+    apiServerProxyConfig:
+      mode: "true"
+      allowImpersonation: "true"
+    # Enable all operator features
+    operatorConfig:
+      image:
+        pullPolicy: IfNotPresent
+      defaultTags:
+        - "tag:k8s-operator"
