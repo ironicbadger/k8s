@@ -74,11 +74,12 @@ list_devices() {
     }
 
     # Filter devices by hostname containing cluster name
-    # Returns: id, hostname, name (MagicDNS name), addresses
+    # Returns: id, hostname, name (MagicDNS name), addresses, lastSeen, online status
+    # lastSeen is only present when device is offline (connectedToControl=false)
     echo "${response}" | jq -r --arg cluster "${CLUSTER}" '
         .devices[]
         | select(.hostname | test($cluster; "i"))
-        | [.id, .hostname, .name, (.addresses[0] // "no-ip")]
+        | [.id, .hostname, .name, (.addresses[0] // "no-ip"), (.lastSeen // "online"), (if .lastSeen then "offline" else "online" end)]
         | @tsv'
 }
 
@@ -155,16 +156,65 @@ main() {
     # Display devices
     if [[ -n "${devices}" ]]; then
         echo "Found devices:"
-        echo "----------------------------------------"
-        printf "%-20s %-30s %-15s\n" "HOSTNAME" "MAGICDNS NAME" "IP"
-        echo "----------------------------------------"
-        while IFS=$'\t' read -r id hostname name ip; do
-            printf "%-20s %-30s %-15s\n" "${hostname}" "${name}" "${ip}"
+        echo "--------------------------------------------------------------------------------"
+        printf "%-20s %-25s %-15s %-8s %s\n" "HOSTNAME" "MAGICDNS NAME" "IP" "STATUS" "LAST SEEN"
+        echo "--------------------------------------------------------------------------------"
+        local stale_count=0
+        local now_epoch
+        now_epoch=$(date +%s)
+        local twelve_hours=$((12 * 60 * 60))
+
+        while IFS=$'\t' read -r id hostname name ip last_seen status; do
+            local last_seen_display=""
+            local is_stale=""
+
+            if [[ "${status}" == "online" ]]; then
+                last_seen_display="now"
+            else
+                # Parse ISO 8601 timestamp and calculate age
+                local last_seen_epoch
+                last_seen_epoch=$(date -j -f "%Y-%m-%dT%H:%M:%SZ" "${last_seen}" +%s 2>/dev/null || \
+                                  date -d "${last_seen}" +%s 2>/dev/null || echo "0")
+
+                if [[ "${last_seen_epoch}" != "0" ]]; then
+                    local age_seconds=$((now_epoch - last_seen_epoch))
+
+                    if [[ ${age_seconds} -gt ${twelve_hours} ]]; then
+                        is_stale="*"
+                        ((stale_count++)) || true
+                    fi
+
+                    # Format age as human readable
+                    if [[ ${age_seconds} -lt 60 ]]; then
+                        last_seen_display="${age_seconds}s ago"
+                    elif [[ ${age_seconds} -lt 3600 ]]; then
+                        last_seen_display="$((age_seconds / 60))m ago"
+                    elif [[ ${age_seconds} -lt 86400 ]]; then
+                        last_seen_display="$((age_seconds / 3600))h ago"
+                    else
+                        last_seen_display="$((age_seconds / 86400))d ago"
+                    fi
+                else
+                    last_seen_display="${last_seen}"
+                fi
+            fi
+
+            if [[ -n "${is_stale}" ]]; then
+                # Highlight stale devices with asterisk
+                printf "%-20s %-25s %-15s %-8s %s %s\n" "${hostname}" "${name}" "${ip}" "${status}" "${last_seen_display}" "[STALE]"
+            else
+                printf "%-20s %-25s %-15s %-8s %s\n" "${hostname}" "${name}" "${ip}" "${status}" "${last_seen_display}"
+            fi
         done <<< "${devices}"
-        echo "----------------------------------------"
+        echo "--------------------------------------------------------------------------------"
         local device_count
         device_count=$(echo "${devices}" | wc -l | tr -d ' ')
         echo "Total: ${device_count} device(s)"
+        if [[ ${stale_count} -gt 0 ]]; then
+            echo ""
+            echo "⚠️  ${stale_count} device(s) marked [STALE] - inactive for >12 hours"
+            echo "   These are candidates for cleanup."
+        fi
         echo ""
     fi
 
@@ -197,7 +247,7 @@ main() {
     if [[ -n "${devices}" ]]; then
         echo ""
         echo "Deleting devices..."
-        while IFS=$'\t' read -r id hostname name ip; do
+        while IFS=$'\t' read -r id hostname name ip last_seen status; do
             echo "  Deleting ${hostname} (${id})..."
             delete_device "${id}" && echo "    Done" || echo "    Failed"
         done <<< "${devices}"

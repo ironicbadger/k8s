@@ -116,38 +116,6 @@ nuke all="false":
         echo "Destroyed (talsecret.sops.yaml preserved)"
     fi
 
-# List Tailscale devices matching cluster
-[no-cd]
-ts-list:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    # Just list, don't delete (script will exit after listing if no confirmation)
-    ./scripts/tailscale-cleanup.sh "${cluster}" <<< "no" || true
-
-# Clean up Tailscale devices for cluster
-[no-cd]
-ts-cleanup:
-    ./scripts/tailscale-cleanup.sh "${cluster}"
-
-# Show Tailscale operator and proxy status
-[no-cd]
-ts-status:
-    #!/usr/bin/env bash
-    KUBECONFIG="clusters/${cluster}/talos/clusterconfig/kubeconfig"
-    if [[ ! -f "${KUBECONFIG}" ]]; then
-        echo "Error: kubeconfig not found. Run: just c bootstrap"
-        exit 1
-    fi
-    export KUBECONFIG
-    echo "=== Tailscale Operator ==="
-    kubectl get pods -n tailscale
-    echo ""
-    echo "=== ProxyGroup Status ==="
-    kubectl get proxygroup -n tailscale 2>/dev/null || echo "No ProxyGroups found (CRD may not be installed yet)"
-    echo ""
-    echo "=== To configure kubectl for Tailscale access ==="
-    echo "  tailscale configure kubeconfig ${cluster}-k8s-api"
-
 # Watch cluster nodes
 [no-cd]
 watch:
