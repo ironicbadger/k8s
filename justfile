@@ -1,5 +1,6 @@
 # Multi-Cluster Kubernetes Infrastructure
-export cluster := "homelab"
+# Override with: cluster=m720q just <command>
+export cluster := env_var_or_default("cluster", "homelab")
 
 mod cluster "scripts/just/cluster.just"
 mod flux "scripts/just/flux.just"
