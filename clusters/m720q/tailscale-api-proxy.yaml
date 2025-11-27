@@ -9,7 +9,7 @@ spec:
   sourceRef:
     kind: GitRepository
     name: flux-system
-  path: ./infrastructure/core/overlays/homelab/api-proxy
+  path: ./infrastructure/core/overlays/m720q/api-proxy
   prune: true
   wait: true
   timeout: 5m0s

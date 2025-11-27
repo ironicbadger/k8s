@@ -1,0 +1,23 @@
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: rook-ceph-cluster
+  namespace: flux-system
+spec:
+  interval: 10m0s
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./infrastructure/core/base/rook-ceph-cluster
+  prune: true
+  wait: true
+  timeout: 10m0s
+  dependsOn:
+    - name: infrastructure
+  # Health checks to ensure operator CRDs are available
+  healthChecks:
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: rook-ceph-operator
+      namespace: rook-ceph

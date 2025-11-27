@@ -1,0 +1,71 @@
+clusterName: talos-m720q
+talosVersion: v1.11.5
+kubernetesVersion: v1.32.0
+endpoint: https://10.42.0.101:6443  # First control plane (Tailscale API proxy provides HA)
+
+allowSchedulingOnControlPlanes: true
+
+# No CNI - Cilium installed via Helm after bootstrap
+cniConfig:
+  name: none
+
+nodes:
+  - hostname: m720q-1
+    ipAddress: 10.42.0.101
+    controlPlane: true
+    installDiskSelector:
+      model: "Phison ESMP512GKB4C3-E13TS"    # Run: talosctl get disks -n 10.42.0.101
+      # wwid: "eui.6479a7663ad012b0"
+    disableSearchDomain: true
+    networkInterfaces:
+      - deviceSelector:
+          driver: ixgbe            # Intel 10G SFP+
+        dhcp: true
+
+  - hostname: m720q-2
+    ipAddress: 10.42.0.102
+    controlPlane: true
+    installDiskSelector:
+      model: "TS512GMTE300S"       # Transcend 512GB NVMe (2230 in wifi slot)
+      # wwid: "eui.00000000000000007c3548525cf562a3"
+    disableSearchDomain: true
+    networkInterfaces:
+      - deviceSelector:
+          driver: mlx4_en          # Mellanox ConnectX-3
+        dhcp: true
+
+  - hostname: m720q-3
+    ipAddress: 10.42.0.103
+    controlPlane: true
+    installDiskSelector:
+      model: "TS512GMTE300S"       # Run: talosctl get disks -n 10.42.0.103
+      # wwid: "eui.00000000000000007c3548525cf562a8"
+    disableSearchDomain: true
+    networkInterfaces:
+      - deviceSelector:
+          driver: ixgbe            # Intel 10G SFP+
+        dhcp: true
+
+controlPlane:
+  patches:
+    - |-
+      cluster:
+        allowSchedulingOnMasters: true
+        proxy:
+          disabled: true           # Cilium replaces kube-proxy
+        discovery:
+          enabled: true
+        etcd:
+          extraArgs:
+            listen-metrics-urls: http://0.0.0.0:2381
+      machine:
+        features:
+          kubePrism:
+            enabled: true
+            port: 7445
+          hostDNS:
+            enabled: true
+            forwardKubeDNSToHost: true
+        kubelet:
+          extraArgs:
+            rotate-server-certificates: true

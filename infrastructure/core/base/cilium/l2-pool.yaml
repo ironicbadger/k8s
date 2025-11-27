@@ -1,0 +1,19 @@
+apiVersion: cilium.io/v2alpha1
+kind: CiliumLoadBalancerIPPool
+metadata:
+  name: lan-pool
+  namespace: kube-system
+spec:
+  blocks:
+    - start: "10.42.0.110"
+      stop: "10.42.0.149"
+---
+apiVersion: cilium.io/v2alpha1
+kind: CiliumL2AnnouncementPolicy
+metadata:
+  name: lan-policy
+  namespace: kube-system
+spec:
+  loadBalancerIPs: true
+  interfaces:
+    - ^enp.*    # Match PCIe NICs (enp1s0f0, etc)
