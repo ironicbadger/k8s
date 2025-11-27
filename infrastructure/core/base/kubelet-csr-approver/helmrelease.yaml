@@ -27,7 +27,5 @@ spec:
       - "0.0.0.0/0"
     # Provider regex to match node names (match m720q-* pattern)
     providerRegex: "^m720q-\\d+$"
-    # Max expiration for certificates (default 367 days)
-    maxExpirationSeconds: 31622400
     # Bypass DNS resolution check (Talos may not have DNS for nodes)
     bypassDnsResolution: true
