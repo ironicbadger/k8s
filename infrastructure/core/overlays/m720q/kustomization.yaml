@@ -3,6 +3,7 @@ kind: Kustomization
 resources:
   - ../../base/cilium
   - ../../base/cert-manager
+  - ../../base/kubelet-csr-approver
   - ../../base/rook-ceph-operator
   - ../../base/tailscale
   - ../../base/flux-webhook

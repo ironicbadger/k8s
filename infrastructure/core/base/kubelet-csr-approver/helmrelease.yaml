@@ -1,0 +1,33 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: kubelet-csr-approver
+  namespace: kubelet-csr-approver
+spec:
+  interval: 30m
+  chart:
+    spec:
+      chart: kubelet-csr-approver
+      version: ">=1.0.0 <2.0.0"
+      sourceRef:
+        kind: HelmRepository
+        name: kubelet-csr-approver
+        namespace: flux-system
+      interval: 12h
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    # Allow requests from any IP (Talos nodes use various IPs)
+    providerIpPrefixes:
+      - "0.0.0.0/0"
+    # Provider regex to match node names (match m720q-* pattern)
+    providerRegex: "^m720q-\\d+$"
+    # Max expiration for certificates (default 367 days)
+    maxExpirationSeconds: 31622400
+    # Bypass DNS resolution check (Talos may not have DNS for nodes)
+    bypassDnsResolution: true
