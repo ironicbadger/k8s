@@ -1,0 +1,11 @@
+---
+apiVersion: tailscale.com/v1alpha1
+kind: Ingress
+metadata:
+  name: ceph-dashboard
+  namespace: rook-ceph
+spec:
+  hostname: ceph-m720q
+  service:
+    name: rook-ceph-mgr-dashboard
+    port: 7000

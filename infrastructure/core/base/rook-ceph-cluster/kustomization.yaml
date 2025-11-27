@@ -3,3 +3,4 @@ kind: Kustomization
 resources:
   - ceph-cluster.yaml
   - storage-class.yaml
+  - tailscale-ingress.yaml
