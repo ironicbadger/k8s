@@ -8,7 +8,7 @@ metadata:
 spec:
   interval: 1m0s
   ref:
-    branch: feature/baremetal-m720q
+    branch: main
   secretRef:
     name: flux-system
   url: ssh://git@github.com/ironicbadger/k8s
