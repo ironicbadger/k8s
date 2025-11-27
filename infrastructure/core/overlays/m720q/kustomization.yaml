@@ -3,6 +3,7 @@ kind: Kustomization
 resources:
   - ../../base/cilium
   - ../../base/cert-manager
+  - ../../base/rook-ceph
   - ../../base/tailscale
   - tailscale-secret.sops.yaml
   - tailscale-helmrelease.yaml

@@ -1,0 +1,74 @@
+---
+apiVersion: ceph.rook.io/v1
+kind: CephCluster
+metadata:
+  name: rook-ceph
+  namespace: rook-ceph
+spec:
+  cephVersion:
+    # Reef is the current stable release
+    image: quay.io/ceph/ceph:v18.2.4
+    allowUnsupported: false
+
+  dataDirHostPath: /var/lib/rook
+
+  mon:
+    count: 3
+    allowMultiplePerNode: false
+
+  mgr:
+    count: 2
+    allowMultiplePerNode: false
+    modules:
+      - name: pg_autoscaler
+        enabled: true
+
+  dashboard:
+    enabled: true
+    ssl: false
+
+  network:
+    connections:
+      encryption:
+        enabled: false
+      compression:
+        enabled: false
+
+  crashCollector:
+    disable: false
+
+  storage:
+    useAllNodes: true
+    useAllDevices: false
+    # Target the Samsung NVMe data disks specifically
+    deviceFilter: "^nvme0n1$"
+    config:
+      osdsPerDevice: "1"
+
+  resources:
+    mgr:
+      limits:
+        memory: "1Gi"
+      requests:
+        cpu: "500m"
+        memory: "512Mi"
+    mon:
+      limits:
+        memory: "2Gi"
+      requests:
+        cpu: "500m"
+        memory: "1Gi"
+    osd:
+      limits:
+        memory: "4Gi"
+      requests:
+        cpu: "500m"
+        memory: "2Gi"
+
+  # Talos Linux compatibility
+  placement:
+    all:
+      tolerations:
+        - effect: NoSchedule
+          key: node-role.kubernetes.io/control-plane
+          operator: Exists
