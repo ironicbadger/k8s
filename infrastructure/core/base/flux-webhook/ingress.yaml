@@ -15,4 +15,4 @@ spec:
         number: 80
   tls:
     - hosts:
-        - m720q-flux-webhook
+        - flux-webhook

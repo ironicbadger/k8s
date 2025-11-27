@@ -9,7 +9,7 @@ spec:
   sourceRef:
     kind: GitRepository
     name: flux-system
-  path: ./infrastructure/core/base/rook-ceph-cluster
+  path: ./infrastructure/core/overlays/m720q/rook-ceph-cluster
   prune: true
   wait: true
   timeout: 10m0s

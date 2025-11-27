@@ -9,5 +9,6 @@ spec:
   replicas: 2
   tags:
     - "tag:k8s-operator"
+    - "tag:k8s-m720q"
   kubeAPIServer:
     mode: auth

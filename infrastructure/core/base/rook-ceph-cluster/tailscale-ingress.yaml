@@ -8,7 +8,7 @@ spec:
   ingressClassName: tailscale
   tls:
     - hosts:
-        - m720q-ceph
+        - ceph-dashboard
   rules:
     - http:
         paths:

@@ -1,0 +1,16 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../../base/rook-ceph-cluster
+patches:
+  - target:
+      kind: Ingress
+      name: ceph-dashboard
+    patch: |
+      - op: add
+        path: /metadata/annotations
+        value:
+          tailscale.com/tags: "tag:k8s-m720q"
+      - op: replace
+        path: /spec/tls/0/hosts/0
+        value: m720q-ceph
