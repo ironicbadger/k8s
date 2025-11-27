@@ -3,5 +3,3 @@ kind: Kustomization
 resources:
   - namespace.yaml
   - operator-helmrelease.yaml
-  - ceph-cluster.yaml
-  - storage-class.yaml

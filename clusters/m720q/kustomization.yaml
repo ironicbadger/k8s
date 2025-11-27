@@ -4,4 +4,5 @@ kind: Kustomization
 resources:
   - sources.yaml
   - infrastructure.yaml
+  - rook-ceph-cluster.yaml
   - tailscale-api-proxy.yaml
