@@ -4,10 +4,11 @@ kind: Ingress
 metadata:
   name: ceph-dashboard
   namespace: rook-ceph
-  annotations:
-    tailscale.com/hostname: ceph-m720q
 spec:
   ingressClassName: tailscale
+  tls:
+    - hosts:
+        - ceph-m720q
   rules:
     - http:
         paths:
