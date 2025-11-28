@@ -8,7 +8,6 @@ resources:
   - ../../base/rook-ceph-operator
   - ../../base/tailscale
   - ../../base/flux-webhook
-  - api-proxy
   - flux-webhook
   - kube-prometheus-stack
   - tailscale
