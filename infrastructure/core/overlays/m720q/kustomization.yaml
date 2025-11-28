@@ -22,3 +22,4 @@ patches:
       - op: replace
         path: /spec/tls/0/hosts/0
         value: m720q-flux-webhook
+  - path: kube-prometheus-stack-helmrelease-patch.yaml

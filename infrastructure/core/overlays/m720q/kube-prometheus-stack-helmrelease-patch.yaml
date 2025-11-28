@@ -1,0 +1,14 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: kube-prometheus-stack
+  namespace: monitoring
+spec:
+  values:
+    grafana:
+      grafana.ini:
+        server:
+          root_url: "https://m720q-grafana.ktz.ts.net/"
+          domain: "m720q-grafana.ktz.ts.net"
+        auth.generic_oauth:
+          redirect_uri: "https://m720q-grafana.ktz.ts.net/login/generic_oauth"

@@ -3,11 +3,3 @@ kind: Kustomization
 resources:
   - kube-prometheus-stack-secret.sops.yaml
   - grafana-ingress.yaml
-patches:
-  - target:
-      kind: HelmRelease
-      name: kube-prometheus-stack
-    patch: |
-      - op: add
-        path: /spec/values/grafana/grafana.ini/server/root_url
-        value: "https://m720q-grafana.ktz.ts.net/"
