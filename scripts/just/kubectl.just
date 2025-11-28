@@ -42,7 +42,7 @@ nodes:
     fi
     KUBECONFIG="${KUBECONFIG}" kubectl get nodes -o wide
 
-# Watch nodes and pods
+# Watch nodes, pods, and events
 [no-cd]
 watch:
     #!/usr/bin/env bash
@@ -53,7 +53,7 @@ watch:
         exit 1
     fi
     export KUBECONFIG
-    watch -n 2 'echo "=== NODES ===" && kubectl get nodes -o wide && echo "" && echo "=== PODS (kube-system) ===" && kubectl get pods -n kube-system -o wide'
+    watch -n 2 'echo "=== NODES ===" && kubectl get nodes -o wide && echo "" && echo "=== PODS (kube-system) ===" && kubectl get pods -n kube-system -o wide && echo "" && echo "=== RECENT EVENTS ===" && kubectl get events -A --sort-by=.lastTimestamp | tail -5'
 
 # Get all pods
 [no-cd]
@@ -68,7 +68,8 @@ pods namespace="-A":
     fi
     KUBECONFIG="${KUBECONFIG}" kubectl get pods {{namespace}} -o wide
 
-# Print kubeconfig path (for export)
+# Copy kubeconfig export to clipboard
 [no-cd]
 config:
-    @echo "clusters/{{_cluster}}/talos/clusterconfig/kubeconfig"
+    @echo "export KUBECONFIG=clusters/{{_cluster}}/talos/clusterconfig/kubeconfig" | pbcopy
+    @echo "Copied to clipboard: export KUBECONFIG=clusters/{{_cluster}}/talos/clusterconfig/kubeconfig"
