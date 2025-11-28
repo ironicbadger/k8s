@@ -76,3 +76,9 @@ nodes:
     echo ""
     yq -r '.nodes[] | "\(.hostname)\t\(.ipAddress)\t\(if .controlPlane then "control-plane" else "worker" end)"' \
         "${TALOS_DIR}/talconfig.yaml" | column -t
+
+# Copy talosconfig export to clipboard
+[no-cd]
+config:
+    @echo "export TALOSCONFIG=clusters/{{_cluster}}/talos/clusterconfig/talosconfig" | pbcopy
+    @echo "Copied to clipboard: export TALOSCONFIG=clusters/{{_cluster}}/talos/clusterconfig/talosconfig"
