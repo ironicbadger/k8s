@@ -24,17 +24,9 @@ spec:
     crds: CreateReplace
     remediation:
       retries: 3
-  valuesFrom:
-    - kind: Secret
-      name: kube-prometheus-stack-oauth
-      valuesKey: client_id
-      targetPath: grafana.grafana\.ini.auth\.generic_oauth.client_id
-    - kind: Secret
-      name: kube-prometheus-stack-oauth
-      valuesKey: client_secret
-      targetPath: grafana.grafana\.ini.auth\.generic_oauth.client_secret
   values:
     grafana:
+      envFromSecret: kube-prometheus-stack-oauth
       grafana.ini:
         server:
           root_url: "%(protocol)s://%(domain)s/"
@@ -42,6 +34,8 @@ spec:
           enabled: true
           name: TailscaleIDP
           scopes: "openid profile email"
+          client_id: $__env{client_id}
+          client_secret: $__env{client_secret}
           auth_url: https://idp.ktz.ts.net/authorize
           token_url: https://idp.ktz.ts.net/token
           api_url: https://idp.ktz.ts.net/userinfo
