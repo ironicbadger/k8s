@@ -1,149 +1,185 @@
 # Kubernetes Multi-Cluster Infrastructure
 
-Unified infrastructure-as-code for managing multiple Kubernetes clusters on Proxmox using Talos Linux.
+Infrastructure-as-code for managing multiple Kubernetes clusters using Talos Linux on both Proxmox VMs and bare metal.
 
 ## Overview
 
-**Single Source of Truth**: `clusters/<name>/cluster.yaml`
+This repository supports two deployment types:
 
-Define node counts, resources, Proxmox settings, and Talos config in one YAML file. Scripts auto-generate Terraform and Talos configurations. All secrets encrypted with SOPS.
+| Type | Source of Truth | Use Case |
+|------|-----------------|----------|
+| **Proxmox** | `clusters/<name>/cluster.yaml` | Virtualized clusters on Proxmox |
+| **Bare Metal** | `clusters/<name>/talos/talconfig.yaml` | Physical hardware (e.g., M720q nodes) |
 
 ## Directory Structure
 
 ```
 .
 ├── clusters/                    # Per-cluster configurations
-│   └── homelab/
-│       ├── cluster.yaml         # ← SINGLE SOURCE OF TRUTH
-│       ├── terraform/           # Generated Terraform configs
-│       └── talos/               # Generated Talos configs
+│   ├── homelab/                 # Proxmox cluster
+│   │   ├── cluster.yaml         # ← Source of truth (Proxmox)
+│   │   ├── terraform/           # Generated Terraform configs
+│   │   └── talos/               # Generated Talos configs
+│   └── m720q/                   # Bare metal cluster
+│       └── talos/
+│           └── talconfig.yaml   # ← Source of truth (bare metal)
 │
 ├── modules/                     # Reusable Terraform modules
 │   └── talos-proxmox/           # Proxmox VM module for Talos
 │
 ├── infrastructure/              # Shared Kubernetes addons (Flux/Kustomize)
 │   ├── sources/                 # Helm repos
-│   ├── core/                    # Required components (cert-manager, ingress)
-│   │   ├── base/
-│   │   └── overlays/
-│   │       ├── homelab/         # Homelab-specific values
-│   │       ├── dev/
-│   │       └── prod/
-│   └── optional/                # Optional components
+│   └── core/                    # Required components
+│       ├── base/                # Shared components
+│       └── overlays/            # Cluster-specific overrides
 │
 ├── scripts/                     # Automation scripts
-│   ├── confgen.sh               # Generate configs from cluster.yaml
-│   ├── gen-talconfig.sh         # Generate talconfig.yaml from cluster.yaml + Terraform IPs
-│   └── talos-apply.sh           # Bootstrap Talos cluster
+│   └── just/                    # Just modules
 │
-└── justfile                     # Command runner (just <command>)
+└── justfile                     # Command runner
 ```
 
 ## Quick Start
 
+### Proxmox Clusters
+
 ```bash
-# 1. Edit cluster configuration
-vim clusters/homelab/cluster.yaml
-
-# 2. Ensure secrets.sops.yaml exists in repo root (encrypted with SOPS)
-
-# 3. Deploy everything
-just fromscratch
+# Deploy a new Proxmox cluster
+just px fromscratch
 
 # Or step by step:
-just confgen      # Generate configs from cluster.yaml
-just init         # Initialize Terraform
-just create       # Deploy VMs
-just talgen       # Generate Talos configs (syncs IPs)
-just bootstrap    # Bootstrap Kubernetes
+just px confgen      # Generate configs from cluster.yaml
+just px init         # Initialize Terraform
+just px create       # Deploy VMs
+just px talgen       # Generate Talos configs (syncs IPs)
+just px bootstrap    # Bootstrap Kubernetes
+```
+
+### Bare Metal Clusters
+
+```bash
+# Set cluster context
+export JUST_BM_CLUSTER=m720q
+
+# Generate configs and apply
+just bm confgen              # Generate Talos configs
+just bm apply m720q-1        # Apply to single node
+just bm bootstrap            # Bootstrap etcd
+just bm kubeconfig           # Fetch kubeconfig
 ```
 
 ## Commands
 
-**Core Workflow:**
-- `just fromscratch` - Build cluster from scratch (all steps)
-- `just confgen` - Generate Terraform/Talos configs from cluster.yaml
-- `just create` - Deploy VMs with Terraform
-- `just talgen` - Generate Talos machine configs (syncs IPs)
-- `just bootstrap` - Bootstrap Kubernetes cluster
+Run `just help` for a complete overview.
 
-**Management:**
-- `just status` - Show cluster status
-- `just watch` - Watch nodes
-- `just plan` - Show Terraform plan
-- `just nuke [all=true]` - Destroy cluster (all=true deletes secrets)
+### Modules
 
-**Multi-cluster:**
-All commands support `cluster=<name>` parameter (default: homelab):
+| Module | Alias | Description |
+|--------|-------|-------------|
+| `just proxmox <cmd>` | `just px` | Proxmox VM provisioning |
+| `just baremetal <cmd>` | `just bm` | Bare metal cluster management |
+| `just talos <cmd>` | - | Talos (talosctl) operations |
+| `just kubectl <cmd>` | `just k` | Kubernetes (kubectl) operations |
+| `just flux <cmd>` | - | GitOps/Flux operations |
+| `just tailscale <cmd>` | `just ts` | Tailscale device management |
+
+### Proxmox Commands (`just px`)
+
 ```bash
-just cluster=prod fromscratch
-just cluster=dev status
+just px confgen       # Generate configs from cluster.yaml
+just px create        # Create/update VMs with Terraform
+just px talgen        # Generate Talos configs
+just px bootstrap     # Bootstrap Kubernetes cluster
+just px fromscratch   # Full build (all above steps)
+just px statesync     # Sync state on new machine
+just px nuke          # Destroy cluster
 ```
 
-Run `just help` for complete list.
+### Bare Metal Commands (`just bm`)
 
-## Multi-Cluster
+Requires `JUST_BM_CLUSTER` environment variable:
 
-Create a new cluster by copying the homelab template:
 ```bash
-cp -r clusters/homelab clusters/prod
-vim clusters/prod/cluster.yaml  # Update name, VM IDs, node counts
-just cluster=prod fromscratch
+export JUST_BM_CLUSTER=m720q
+
+just bm confgen           # Generate Talos configs
+just bm apply <node>      # Apply config to node
+just bm apply-all         # Apply to all nodes
+just bm bootstrap         # Bootstrap etcd
+just bm kubeconfig        # Fetch kubeconfig
+just bm upgrade <node> <version>  # Upgrade Talos
+```
+
+### Shared Commands
+
+```bash
+# Talos operations (uses $cluster variable)
+just talos dashboard <node>   # Open Talos dashboard
+just talos health             # Check cluster health
+just talos nodes              # List nodes from talconfig
+
+# Kubectl operations (uses $cluster variable)
+just k status                 # Recent pods (newest 15)
+just k nodes                  # Show nodes
+just k watch                  # Watch nodes/pods
+just k pods                   # All pods
+
+# Flux operations
+just flux bootstrap           # Bootstrap Flux
+just flux status              # Show Flux status
+```
+
+### Multi-cluster
+
+Proxmox clusters support the `cluster` variable:
+```bash
+cluster=prod just px status
+cluster=dev just k nodes
+```
+
+Bare metal uses `JUST_BM_CLUSTER`:
+```bash
+JUST_BM_CLUSTER=m720q just bm confgen
+```
+
+## New Machine Setup
+
+### Proxmox Clusters
+
+```bash
+# 1. Import GPG key (see Secrets section)
+# 2. Sync local state from remote
+just px statesync
+```
+
+### Bare Metal Clusters
+
+```bash
+# 1. Import GPG key
+# 2. Generate configs (talconfig.yaml is already in git)
+export JUST_BM_CLUSTER=m720q
+just bm confgen
 ```
 
 ## Secrets Management
 
-All secrets encrypted with [SOPS](https://github.com/mozilla/sops) using GPG (key: `6636CBF9CE1DE1A8`).
-
-Verify the key with `gpg --list-secret-keys 6636CBF9CE1DE1A8`.
+All secrets encrypted with [SOPS](https://github.com/mozilla/sops) using GPG.
 
 **Encrypted files:**
 - `secrets.sops.yaml` - Proxmox API tokens, S3 credentials
 - `clusters/*/talos/talsecret.sops.yaml` - Talos cluster secrets
 
-Scripts automatically decrypt during operations.
+### Setting up GPG
 
-### Multi-System Setup
-
-**Working on a new system:**
-
-1. **Import the GPG private key:**
-   ```bash
-   # Export from original system
-   gpg --export-secret-keys --armor 6636CBF9CE1DE1A8 > key.asc
-
-   # Import on new system
-   gpg --import key.asc
-   gpg --edit-key 6636CBF9CE1DE1A8
-   gpg> trust → 5 (ultimate) → quit
-   ```
-
-2. **Test decryption:**
-   ```bash
-   sops -d secrets.sops.yaml
-   ```
-
-3. **Sync local state:**
-   ```bash
-   just cluster statesync
-   ```
-   This regenerates gitignored files (talconfig.yaml, kubeconfig, etc.) from remote Terraform state.
-
-**Adding team members:**
-
-Add their GPG key to `.sops.yaml` and re-encrypt:
 ```bash
-# Multiple keys comma-separated
-echo 'creation_rules:
-  - pgp: 6636CBF9CE1DE1A8,THEIR_KEY_ID' > .sops.yaml
+# Import key on new system
+gpg --import key.asc
+gpg --edit-key <KEY_ID>
+gpg> trust → 5 (ultimate) → quit
 
-sops updatekeys secrets.sops.yaml
-sops updatekeys clusters/*/talos/talsecret.sops.yaml
+# Test decryption
+sops -d secrets.sops.yaml
 ```
-
-**Resources:**
-- [GPG key generation guide](https://docs.github.com/en/authentication/managing-commit-signature-verification/generating-a-new-gpg-key)
-- [SOPS documentation](https://github.com/mozilla/sops#usage)
 
 ## Requirements
 
@@ -152,4 +188,4 @@ sops updatekeys clusters/*/talos/talsecret.sops.yaml
 
 ## Details
 
-See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed documentation on the unified cluster configuration system.
+See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed documentation.
