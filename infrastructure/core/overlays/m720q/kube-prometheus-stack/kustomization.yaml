@@ -3,5 +3,3 @@ kind: Kustomization
 resources:
   - kube-prometheus-stack-secret.sops.yaml
   - grafana-ingress.yaml
-patches:
-  - path: helmrelease-patch.yaml

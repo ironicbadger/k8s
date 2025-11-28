@@ -13,3 +13,5 @@ resources:
   - kube-prometheus-stack
   - rook-ceph-cluster
   - tailscale
+patches:
+  - path: kube-prometheus-stack/helmrelease-patch.yaml
