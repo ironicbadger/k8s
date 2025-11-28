@@ -73,3 +73,18 @@ pods namespace="-A":
 config:
     @echo "export KUBECONFIG=clusters/{{_cluster}}/talos/clusterconfig/kubeconfig" | pbcopy
     @echo "Copied to clipboard: export KUBECONFIG=clusters/{{_cluster}}/talos/clusterconfig/kubeconfig"
+
+# Get Ceph dashboard admin password and copy to clipboard
+[no-cd]
+ceph-password:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    CLUSTER="{{_cluster}}"
+    KUBECONFIG="clusters/${CLUSTER}/talos/clusterconfig/kubeconfig"
+    if [[ ! -f "${KUBECONFIG}" ]]; then
+        echo "Error: kubeconfig not found for cluster '${CLUSTER}'"
+        exit 1
+    fi
+    PASSWORD=$(KUBECONFIG="${KUBECONFIG}" kubectl -n rook-ceph get secret rook-ceph-dashboard-password -o jsonpath="{['data']['password']}" | base64 --decode)
+    echo "$PASSWORD" | pbcopy
+    echo "Copied to clipboard: $PASSWORD"
