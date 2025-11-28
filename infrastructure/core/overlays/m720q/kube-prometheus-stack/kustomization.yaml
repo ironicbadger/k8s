@@ -3,3 +3,4 @@ kind: Kustomization
 resources:
   - kube-prometheus-stack-secret.sops.yaml
   - grafana-ingress.yaml
+  - grafana-dashboard-node-exporter-full.yaml
