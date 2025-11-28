@@ -1,4 +1,5 @@
-# Cluster provisioning recipes
+# Proxmox VM cluster provisioning
+# Usage: just proxmox <command> or just px <command>
 
 set shell := ["bash", "-euo", "pipefail", "-c"]
 
@@ -11,7 +12,7 @@ _tf *args:
     PROJECT_ROOT="$(pwd)"
     CLUSTER_DIR="clusters/${cluster}/terraform"
     if [[ ! -d "${CLUSTER_DIR}" ]]; then
-        echo "Error: Cluster '${cluster}' not found. Run: just c confgen"
+        echo "Error: Cluster '${cluster}' not found. Run: just px confgen"
         exit 1
     fi
     cd "${CLUSTER_DIR}"
@@ -27,28 +28,28 @@ _tf *args:
 [no-cd]
 confgen:
     @./scripts/confgen.sh ${cluster}
-    @echo "Next: just c create"
+    @echo "Next: just px create"
 
 # Initialize Terraform (first time only)
 [no-cd]
 init:
-    just cluster::_tf init
+    just proxmox::_tf init
 
 # Show Terraform plan
 [no-cd]
 plan:
-    just cluster::_tf plan -var-file=secrets.tfvars
+    just proxmox::_tf plan -var-file=secrets.tfvars
 
 # Create/update VMs with Terraform
 [no-cd]
 create:
-    just cluster::_tf apply -auto-approve -var-file=secrets.tfvars
-    @echo "Next: just c talgen"
+    just proxmox::_tf apply -auto-approve -var-file=secrets.tfvars
+    @echo "Next: just px talgen"
 
 # Refresh Terraform state
 [no-cd]
 refresh:
-    just cluster::_tf refresh -var-file=secrets.tfvars
+    just proxmox::_tf refresh -var-file=secrets.tfvars
 
 # Generate Talos configs
 [no-cd]
@@ -63,7 +64,7 @@ talgen:
     fi
     cd "${TALOS_DIR}"
     talhelper genconfig
-    echo "Next: just c bootstrap"
+    echo "Next: just px bootstrap"
 
 # Bootstrap Talos cluster
 [no-cd]
@@ -73,7 +74,7 @@ bootstrap:
     PROJECT_ROOT="$(pwd)"
     TALOS_DIR="clusters/${cluster}/talos"
     if [[ ! -d "${TALOS_DIR}/clusterconfig" ]]; then
-        echo "Error: Talos configs not found. Run: just c talgen"
+        echo "Error: Talos configs not found. Run: just px talgen"
         exit 1
     fi
     cd "${TALOS_DIR}"
@@ -100,8 +101,8 @@ nuke all="false":
     # Run Terraform destroy in parallel
     echo ""
     echo "=== Proxmox/Terraform Cleanup ==="
-    just cluster::_tf "apply -auto-approve -var-file=secrets.tfvars -var=force_stop=true" 2>/dev/null || true
-    just cluster::_tf "destroy -auto-approve -var-file=secrets.tfvars -var=force_stop=true"
+    just proxmox::_tf "apply -auto-approve -var-file=secrets.tfvars -var=force_stop=true" 2>/dev/null || true
+    just proxmox::_tf "destroy -auto-approve -var-file=secrets.tfvars -var=force_stop=true"
 
     # Wait for Tailscale cleanup to complete
     wait $TS_PID || echo "Warning: Tailscale cleanup may have failed"
@@ -116,41 +117,15 @@ nuke all="false":
         echo "Destroyed (talsecret.sops.yaml preserved)"
     fi
 
-# Watch cluster nodes
-[no-cd]
-watch:
-    #!/usr/bin/env bash
-    KUBECONFIG="clusters/${cluster}/talos/clusterconfig/kubeconfig"
-    if [[ ! -f "${KUBECONFIG}" ]]; then
-        echo "Error: kubeconfig not found. Run: just c bootstrap"
-        exit 1
-    fi
-    KUBECONFIG="${KUBECONFIG}" watch -n 2 kubectl get nodes
-
-# Show cluster status
-[no-cd]
-status:
-    #!/usr/bin/env bash
-    KUBECONFIG="clusters/${cluster}/talos/clusterconfig/kubeconfig"
-    if [[ ! -f "${KUBECONFIG}" ]]; then
-        echo "Error: Cluster ${cluster} not bootstrapped"
-        exit 1
-    fi
-    echo "Cluster: ${cluster}"
-    echo ""
-    KUBECONFIG="${KUBECONFIG}" kubectl get nodes
-    echo ""
-    KUBECONFIG="${KUBECONFIG}" kubectl get pods -A
-
 # Build cluster from scratch
 [no-cd]
 fromscratch:
     @echo "A brand new cluster from scratch you say? Yesssssssssir-y! Can doooooo."
-    just cluster confgen
-    just cluster init
-    just cluster create
-    just cluster talgen
-    just cluster bootstrap
+    just proxmox confgen
+    just proxmox init
+    just proxmox create
+    just proxmox talgen
+    just proxmox bootstrap
 
 alias fs := fromscratch
 
@@ -160,9 +135,9 @@ statesync:
     #!/usr/bin/env bash
     set -euo pipefail
     echo "Syncing local state for cluster: ${cluster}"
-    just cluster confgen
-    just cluster init
-    just cluster talgen
+    just proxmox confgen
+    just proxmox init
+    just proxmox talgen
 
     # Configure kubeconfig via Tailscale API proxy
     PROXYGROUP_FILE="infrastructure/core/base/tailscale/api-proxy/proxygroup.yaml"
@@ -172,7 +147,7 @@ statesync:
         tailscale configure kubeconfig "${PROXYGROUP_NAME}"
     else
         echo "Warning: ProxyGroup not found, skipping Tailscale kubeconfig setup"
-        echo "Run 'just cluster bootstrap' when on the local network"
+        echo "Run 'just px bootstrap' when on the local network"
     fi
     echo ""
     echo "State sync complete."

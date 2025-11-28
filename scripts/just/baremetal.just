@@ -1,15 +1,32 @@
 # Bare metal Talos cluster management
-# Usage: just bm <command>
+# Usage: export JUST_BM_CLUSTER=m720q && just bm <command>
 # No nuke command - too dangerous for physical hardware
 
 set shell := ["bash", "-euo", "pipefail", "-c"]
 
-# Bare metal cluster (hardcoded - not using parent's $cluster)
-bm_cluster := "m720q"
+# Cluster name from environment variable
+bm_cluster := env_var_or_default("JUST_BM_CLUSTER", "")
 
-# Generate Talos configs
+# Guard: check cluster is set
+[private]
 [no-cd]
-genconfig:
+_check_cluster:
+    #!/usr/bin/env bash
+    if [[ -z "{{bm_cluster}}" ]]; then
+        echo "Error: JUST_BM_CLUSTER not set"
+        echo ""
+        echo "Set it with:"
+        echo "  export JUST_BM_CLUSTER=m720q"
+        exit 1
+    fi
+    if [[ ! -d "clusters/{{bm_cluster}}" ]]; then
+        echo "Error: Cluster directory not found: clusters/{{bm_cluster}}"
+        exit 1
+    fi
+
+# Generate Talos configs from talconfig.yaml
+[no-cd]
+confgen: _check_cluster
     #!/usr/bin/env bash
     set -euo pipefail
     TALOS_DIR="clusters/{{bm_cluster}}/talos"
@@ -27,9 +44,10 @@ genconfig:
     echo "  1. Boot nodes via PiKVM with Talos ISO"
     echo "  2. Run: just bm apply <node> (name defined in talconfig.yaml)"
 
-# Apply config to a single node (safer than bulk apply)
+# Apply config to a single node
+# Uses --insecure for initial install, talosconfig for running cluster
 [no-cd]
-apply node:
+apply node: _check_cluster
     #!/usr/bin/env bash
     set -euo pipefail
     TALOS_DIR="clusters/{{bm_cluster}}/talos"
@@ -40,29 +58,51 @@ apply node:
         exit 1
     fi
     echo "Applying config to {{node}} (${IP})..."
-    talosctl apply-config --insecure --nodes "${IP}" \
-        --file "clusterconfig/talos-{{bm_cluster}}-{{node}}.yaml"
-    echo "Config applied. Node will reboot and install Talos."
+    if [[ -f "clusterconfig/talosconfig" ]]; then
+        # Cluster exists, use authenticated apply
+        talosctl apply-config --nodes "${IP}" \
+            --talosconfig clusterconfig/talosconfig \
+            --file "clusterconfig/talos-{{bm_cluster}}-{{node}}.yaml"
+    else
+        # Initial install, use insecure mode
+        talosctl apply-config --insecure --nodes "${IP}" \
+            --file "clusterconfig/talos-{{bm_cluster}}-{{node}}.yaml"
+    fi
+    echo "Config applied."
 
 # Apply config to all nodes
+# Uses --insecure for initial install, talosconfig for running cluster
 [no-cd]
-apply-all:
+apply-all: _check_cluster
     #!/usr/bin/env bash
     set -euo pipefail
     TALOS_DIR="clusters/{{bm_cluster}}/talos"
     cd "${TALOS_DIR}"
+
+    if [[ -f "clusterconfig/talosconfig" ]]; then
+        AUTH_ARGS="--talosconfig clusterconfig/talosconfig"
+        echo "Applying configs to running cluster..."
+    else
+        AUTH_ARGS="--insecure"
+        echo "Applying configs for initial install..."
+    fi
+
     for node in $(yq -r '.nodes[].hostname' talconfig.yaml); do
         IP=$(yq -r ".nodes[] | select(.hostname == \"${node}\") | .ipAddress" talconfig.yaml)
         echo "Applying config to ${node} (${IP})..."
-        talosctl apply-config --insecure --nodes "${IP}" \
+        talosctl apply-config ${AUTH_ARGS} --nodes "${IP}" \
             --file "clusterconfig/talos-{{bm_cluster}}-${node}.yaml"
     done
     echo ""
-    echo "All configs applied. Next: just bm bootstrap"
+    if [[ -f "clusterconfig/talosconfig" ]]; then
+        echo "All configs applied."
+    else
+        echo "All configs applied. Next: just bm bootstrap"
+    fi
 
 # Bootstrap etcd on first control plane
 [no-cd]
-bootstrap:
+bootstrap: _check_cluster
     #!/usr/bin/env bash
     set -euo pipefail
     TALOS_DIR="clusters/{{bm_cluster}}/talos"
@@ -76,7 +116,7 @@ bootstrap:
 
 # Fetch kubeconfig
 [no-cd]
-kubeconfig:
+kubeconfig: _check_cluster
     #!/usr/bin/env bash
     set -euo pipefail
     TALOS_DIR="clusters/{{bm_cluster}}/talos"
@@ -88,48 +128,3 @@ kubeconfig:
     echo ""
     echo "Kubeconfig saved. To use:"
     echo "  export KUBECONFIG=$(pwd)/clusterconfig/kubeconfig"
-
-# Show cluster status
-[no-cd]
-status:
-    #!/usr/bin/env bash
-    KUBECONFIG="clusters/{{bm_cluster}}/talos/clusterconfig/kubeconfig"
-    if [[ ! -f "${KUBECONFIG}" ]]; then
-        echo "Error: kubeconfig not found. Run: just bm kubeconfig"
-        exit 1
-    fi
-    echo "Cluster: {{bm_cluster}}"
-    echo ""
-    KUBECONFIG="${KUBECONFIG}" kubectl get nodes -o wide
-    echo ""
-    KUBECONFIG="${KUBECONFIG}" kubectl get pods -A
-
-# Watch cluster (nodes + pods + events)
-[no-cd]
-watch:
-    #!/usr/bin/env bash
-    KUBECONFIG="clusters/{{bm_cluster}}/talos/clusterconfig/kubeconfig"
-    export KUBECONFIG
-    watch -n 2 'echo "=== NODES ===" && kubectl get nodes -o wide && echo "" && echo "=== PODS (kube-system) ===" && kubectl get pods -n kube-system -o wide && echo "" && echo "=== RECENT EVENTS ===" && kubectl get events -A --sort-by=.lastTimestamp | tail -10'
-
-# Talos dashboard for a node
-[no-cd]
-dashboard node="m720q-1":
-    #!/usr/bin/env bash
-    TALOS_DIR="clusters/{{bm_cluster}}/talos"
-    IP=$(yq -r ".nodes[] | select(.hostname == \"{{node}}\") | .ipAddress" "${TALOS_DIR}/talconfig.yaml")
-    talosctl dashboard --nodes "${IP}" \
-        --talosconfig "${TALOS_DIR}/clusterconfig/talosconfig"
-
-# Upgrade Talos on a single node (use with caution)
-[no-cd]
-[confirm("This will upgrade Talos on {{node}}. The node will reboot. Continue?")]
-upgrade node version:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    TALOS_DIR="clusters/{{bm_cluster}}/talos"
-    IP=$(yq -r ".nodes[] | select(.hostname == \"{{node}}\") | .ipAddress" "${TALOS_DIR}/talconfig.yaml")
-    echo "Upgrading {{node}} (${IP}) to {{version}}..."
-    talosctl upgrade --nodes "${IP}" \
-        --talosconfig "${TALOS_DIR}/clusterconfig/talosconfig" \
-        --image "factory.talos.dev/installer/{{version}}"

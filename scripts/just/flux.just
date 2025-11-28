@@ -1,15 +1,23 @@
 # Flux/GitOps recipes
+# Usage: just flux <command>
+#
+# For bare metal: export JUST_BM_CLUSTER=m720q
+# For Proxmox: uses $cluster variable (default: homelab)
 
 set shell := ["bash", "-euo", "pipefail", "-c"]
+
+# Resolve cluster: JUST_BM_CLUSTER takes precedence, then $cluster
+_cluster := env_var_or_default("JUST_BM_CLUSTER", env_var_or_default("cluster", "homelab"))
 
 # Bootstrap Flux GitOps (optionally specify branch, defaults to main)
 [no-cd]
 bootstrap branch="main":
     #!/usr/bin/env bash
     set -euo pipefail
-    KUBECONFIG="clusters/${cluster}/talos/clusterconfig/kubeconfig"
+    CLUSTER="{{_cluster}}"
+    KUBECONFIG="clusters/${CLUSTER}/talos/clusterconfig/kubeconfig"
     if [[ ! -f "${KUBECONFIG}" ]]; then
-        echo "Error: kubeconfig not found. Run: just c bootstrap"
+        echo "Error: kubeconfig not found for cluster '${CLUSTER}'"
         exit 1
     fi
     export KUBECONFIG
@@ -55,7 +63,7 @@ bootstrap branch="main":
       --owner=ironicbadger \
       --repository=k8s \
       --branch={{branch}} \
-      --path=clusters/${cluster} \
+      --path=clusters/${CLUSTER} \
       --personal \
       --timeout=2m
 
@@ -63,9 +71,10 @@ bootstrap branch="main":
 [no-cd]
 status:
     #!/usr/bin/env bash
-    KUBECONFIG="clusters/${cluster}/talos/clusterconfig/kubeconfig"
+    CLUSTER="{{_cluster}}"
+    KUBECONFIG="clusters/${CLUSTER}/talos/clusterconfig/kubeconfig"
     if [[ ! -f "${KUBECONFIG}" ]]; then
-        echo "Error: kubeconfig not found. Run: just c bootstrap"
+        echo "Error: kubeconfig not found for cluster '${CLUSTER}'"
         exit 1
     fi
     KUBECONFIG="${KUBECONFIG}" flux get all -A
@@ -74,9 +83,10 @@ status:
 [no-cd]
 uninstall:
     #!/usr/bin/env bash
-    KUBECONFIG="clusters/${cluster}/talos/clusterconfig/kubeconfig"
+    CLUSTER="{{_cluster}}"
+    KUBECONFIG="clusters/${CLUSTER}/talos/clusterconfig/kubeconfig"
     if [[ ! -f "${KUBECONFIG}" ]]; then
-        echo "Error: kubeconfig not found"
+        echo "Error: kubeconfig not found for cluster '${CLUSTER}'"
         exit 1
     fi
     KUBECONFIG="${KUBECONFIG}" flux uninstall
