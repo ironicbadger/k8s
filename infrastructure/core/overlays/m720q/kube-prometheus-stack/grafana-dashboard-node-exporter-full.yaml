@@ -8195,6 +8195,7 @@ data:
                   "editorMode": "code",
                   "expr": "node_hwmon_temp_crit_celsius{instance=\"$node\",job=\"$job\"} * on(chip) group_left(chip_name) node_hwmon_chip_names{instance=\"$node\",job=\"$job\"}",
                   "format": "time_series",
+                  "hide": true,
                   "interval": "",
                   "legendFormat": "{{ chip_name }} {{ sensor }} Critical",
                   "range": true,
