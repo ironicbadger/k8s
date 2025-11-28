@@ -4,5 +4,6 @@ resources:
   - cilium.yaml
   - jetstack.yaml
   - kubelet-csr-approver.yaml
+  - prometheus-community.yaml
   - rook.yaml
   - tailscale.yaml

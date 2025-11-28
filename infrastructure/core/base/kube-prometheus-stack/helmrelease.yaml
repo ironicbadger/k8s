@@ -1,0 +1,47 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: kube-prometheus-stack
+  namespace: monitoring
+spec:
+  interval: 30m
+  chart:
+    spec:
+      chart: kube-prometheus-stack
+      version: "79.x"
+      sourceRef:
+        kind: HelmRepository
+        name: prometheus-community
+        namespace: flux-system
+      interval: 30m
+  install:
+    createNamespace: true
+    crds: Create
+    remediation:
+      retries: 3
+  upgrade:
+    crds: CreateReplace
+    remediation:
+      retries: 3
+  valuesFrom:
+    - kind: Secret
+      name: kube-prometheus-stack-oauth
+      valuesKey: client_id
+      targetPath: grafana.grafana\.ini.auth\.generic_oauth.client_id
+    - kind: Secret
+      name: kube-prometheus-stack-oauth
+      valuesKey: client_secret
+      targetPath: grafana.grafana\.ini.auth\.generic_oauth.client_secret
+  values:
+    grafana:
+      grafana.ini:
+        server:
+          root_url: "%(protocol)s://%(domain)s/"
+        auth.generic_oauth:
+          enabled: true
+          name: TailscaleIDP
+          scopes: "openid profile email"
+          auth_url: https://idp.ktz.ts.net/authorize
+          token_url: https://idp.ktz.ts.net/token
+          api_url: https://idp.ktz.ts.net/userinfo

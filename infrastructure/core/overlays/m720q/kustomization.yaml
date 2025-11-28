@@ -4,11 +4,13 @@ resources:
   - ../../base/cilium
   - ../../base/cert-manager
   - ../../base/kubelet-csr-approver
+  - ../../base/kube-prometheus-stack
   - ../../base/rook-ceph-operator
   - ../../base/tailscale
   - ../../base/flux-webhook
   - tailscale-secret.sops.yaml
   - tailscale-helmrelease.yaml
+  - kube-prometheus-stack
 patches:
   - target:
       kind: Ingress
