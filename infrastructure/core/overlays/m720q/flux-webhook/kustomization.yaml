@@ -1,0 +1,13 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+patches:
+  - target:
+      kind: Ingress
+      name: flux-webhook
+    patch: |
+      - op: add
+        path: /metadata/annotations/tailscale.com~1tags
+        value: "tag:k8s-funnel,tag:k8s-m720q"
+      - op: replace
+        path: /spec/tls/0/hosts/0
+        value: m720q-flux-webhook
