@@ -26,6 +26,10 @@ spec:
     # Enable discovery daemon to find devices
     enableDiscoveryDaemon: true
 
+    # Enable monitoring RBAC for ServiceMonitor access
+    monitoring:
+      enabled: true
+
     # CSI driver settings
     csi:
       enableRbdDriver: true
