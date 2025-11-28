@@ -25,7 +25,32 @@ spec:
     remediation:
       retries: 3
   values:
+    prometheus:
+      prometheusSpec:
+        retention: 30d
+        storageSpec:
+          volumeClaimTemplate:
+            spec:
+              storageClassName: ceph-block
+              accessModes: ["ReadWriteOnce"]
+              resources:
+                requests:
+                  storage: 50Gi
+    alertmanager:
+      alertmanagerSpec:
+        storage:
+          volumeClaimTemplate:
+            spec:
+              storageClassName: ceph-block
+              accessModes: ["ReadWriteOnce"]
+              resources:
+                requests:
+                  storage: 2Gi
     grafana:
+      persistence:
+        enabled: true
+        storageClassName: ceph-block
+        size: 5Gi
       envFromSecret: kube-prometheus-stack-oauth
       grafana.ini:
         server:
