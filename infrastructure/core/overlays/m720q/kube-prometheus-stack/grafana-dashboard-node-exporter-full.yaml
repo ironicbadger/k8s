@@ -8174,7 +8174,7 @@ data:
               "targets": [
                 {
                   "editorMode": "code",
-                  "expr": "node_hwmon_temp_celsius{instance=\"$node\",job=\"$job\",sensor!~\"temp5\"} * on(chip) group_left(chip_name) node_hwmon_chip_names{instance=\"$node\",job=\"$job\",chip=~\".*nct6686.*\"} or node_hwmon_temp_celsius{instance=\"$node\",job=\"$job\"} * on(chip) group_left(chip_name) node_hwmon_chip_names{instance=\"$node\",job=\"$job\",chip!~\".*nct6686.*\"}",
+                  "expr": "node_hwmon_temp_celsius{instance=\"$node\",job=\"$job\"} * on(chip) group_left(chip_name) node_hwmon_chip_names{instance=\"$node\",job=\"$job\"} unless on(chip, sensor) node_hwmon_temp_celsius{instance=\"$node\",job=\"$job\", sensor=\"temp5\", chip=~\".*nct6686.*\"}",
                   "format": "time_series",
                   "interval": "",
                   "legendFormat": "{{ chip_name }} {{ sensor }}",
