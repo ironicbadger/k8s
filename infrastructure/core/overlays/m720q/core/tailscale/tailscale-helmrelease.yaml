@@ -42,3 +42,4 @@ spec:
         pullPolicy: IfNotPresent
       defaultTags:
         - "tag:k8s-operator"
+        - "tag:k8s-m720q"

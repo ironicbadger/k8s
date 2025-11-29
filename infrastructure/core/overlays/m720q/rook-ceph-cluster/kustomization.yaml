@@ -10,7 +10,7 @@ patches:
       - op: add
         path: /metadata/annotations
         value:
-          tailscale.com/tags: "tag:k8s-m720q"
+          tailscale.com/tags: "tag:k8s-m720q,tag:k8s"
       - op: replace
         path: /spec/tls/0/hosts/0
         value: m720q-ceph
