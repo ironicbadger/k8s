@@ -7,7 +7,7 @@ patches:
     patch: |
       - op: add
         path: /metadata/annotations/tailscale.com~1tags
-        value: "tag:k8s-funnel,tag:k8s-m720q"
+        value: "tag:k8s,tag:k8s-m720q,tag:k8s-funnel"
       - op: replace
         path: /spec/tls/0/hosts/0
         value: m720q-flux-webhook
