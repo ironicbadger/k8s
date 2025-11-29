@@ -6,4 +6,3 @@ resources:
   - ../../../base/kubelet-csr-approver
   - ../../../base/tailscale
   - tailscale
-  - api-proxy
