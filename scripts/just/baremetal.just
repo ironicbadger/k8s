@@ -45,9 +45,9 @@ confgen: _check_cluster
     echo "  2. Run: just bm apply <node> (name defined in talconfig.yaml)"
 
 # Apply config to a single node
-# Uses --insecure for initial install, talosconfig for running cluster
+# Pass --insecure for initial install on fresh nodes
 [no-cd]
-apply node: _check_cluster
+apply node *args: _check_cluster
     #!/usr/bin/env bash
     set -euo pipefail
     TALOS_DIR="clusters/{{bm_cluster}}/talos"
@@ -58,33 +58,31 @@ apply node: _check_cluster
         exit 1
     fi
     echo "Applying config to {{node}} (${IP})..."
-    if [[ -f "clusterconfig/talosconfig" ]]; then
-        # Cluster exists, use authenticated apply
-        talosctl apply-config --nodes "${IP}" \
-            --talosconfig clusterconfig/talosconfig \
+    if [[ "{{args}}" == *"--insecure"* ]]; then
+        talosctl apply-config --insecure --nodes "${IP}" \
             --file "clusterconfig/talos-{{bm_cluster}}-{{node}}.yaml"
     else
-        # Initial install, use insecure mode
-        talosctl apply-config --insecure --nodes "${IP}" \
+        talosctl apply-config --nodes "${IP}" \
+            --talosconfig clusterconfig/talosconfig \
             --file "clusterconfig/talos-{{bm_cluster}}-{{node}}.yaml"
     fi
     echo "Config applied."
 
 # Apply config to all nodes
-# Uses --insecure for initial install, talosconfig for running cluster
+# Pass --insecure for initial install on fresh nodes
 [no-cd]
-apply-all: _check_cluster
+apply-all *args: _check_cluster
     #!/usr/bin/env bash
     set -euo pipefail
     TALOS_DIR="clusters/{{bm_cluster}}/talos"
     cd "${TALOS_DIR}"
 
-    if [[ -f "clusterconfig/talosconfig" ]]; then
-        AUTH_ARGS="--talosconfig clusterconfig/talosconfig"
-        echo "Applying configs to running cluster..."
-    else
+    if [[ "{{args}}" == *"--insecure"* ]]; then
         AUTH_ARGS="--insecure"
         echo "Applying configs for initial install..."
+    else
+        AUTH_ARGS="--talosconfig clusterconfig/talosconfig"
+        echo "Applying configs to running cluster..."
     fi
 
     for node in $(yq -r '.nodes[].hostname' talconfig.yaml); do
@@ -93,12 +91,7 @@ apply-all: _check_cluster
         talosctl apply-config ${AUTH_ARGS} --nodes "${IP}" \
             --file "clusterconfig/talos-{{bm_cluster}}-${node}.yaml"
     done
-    echo ""
-    if [[ -f "clusterconfig/talosconfig" ]]; then
-        echo "All configs applied."
-    else
-        echo "All configs applied. Next: just bm bootstrap"
-    fi
+    echo "All configs applied."
 
 # Bootstrap etcd on first control plane
 [no-cd]
@@ -128,3 +121,30 @@ kubeconfig: _check_cluster
     echo ""
     echo "Kubeconfig saved. To use:"
     echo "  export KUBECONFIG=$(pwd)/clusterconfig/kubeconfig"
+
+# Install Cilium CNI (required before Flux bootstrap)
+[no-cd]
+cilium: _check_cluster
+    #!/usr/bin/env bash
+    set -euo pipefail
+    KUBECONFIG="clusters/{{bm_cluster}}/talos/clusterconfig/kubeconfig"
+    if [[ ! -f "$KUBECONFIG" ]]; then
+        echo "Error: kubeconfig not found. Run 'just bm kubeconfig' first."
+        exit 1
+    fi
+    export KUBECONFIG
+    helm repo add cilium https://helm.cilium.io/
+    helm repo update cilium
+    echo "Installing Cilium..."
+    helm install cilium cilium/cilium --version 1.16.4 --namespace kube-system \
+      --set ipam.mode=kubernetes \
+      --set kubeProxyReplacement=true \
+      --set k8sServiceHost=127.0.0.1 \
+      --set k8sServicePort=7445 \
+      --set cgroup.autoMount.enabled=false \
+      --set cgroup.hostRoot=/sys/fs/cgroup \
+      --set securityContext.capabilities.ciliumAgent="{CHOWN,KILL,NET_ADMIN,NET_RAW,IPC_LOCK,SYS_ADMIN,SYS_RESOURCE,DAC_OVERRIDE,FOWNER,SETGID,SETUID}" \
+      --set securityContext.capabilities.cleanCiliumState="{NET_ADMIN,SYS_ADMIN,SYS_RESOURCE}"
+    echo ""
+    echo "Cilium installed. Wait for nodes to become Ready:"
+    echo "  kubectl get nodes -w"
