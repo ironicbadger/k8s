@@ -15,11 +15,3 @@ spec:
   timeout: 10m0s
   dependsOn:
     - name: rook-ceph-operator
-  healthCheckExprs:
-    - apiVersion: ceph.rook.io/v1
-      kind: CephCluster
-      current: >-
-        status.phase == 'Ready' &&
-        (status.ceph.health == 'HEALTH_OK' || status.ceph.health == 'HEALTH_WARN')
-      failed: >-
-        status.conditions.exists(e, e.type == 'Ready' && e.status == 'False')
