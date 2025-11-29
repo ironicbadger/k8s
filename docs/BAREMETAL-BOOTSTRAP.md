@@ -64,7 +64,26 @@ Nodes will reboot and apply their configuration.
 export TALOSCONFIG=$(pwd)/clusters/m720q/talos/clusterconfig/talosconfig
 ```
 
-### 6. Bootstrap etcd
+### 6. Wipe Non-System Disks
+
+> **Important**: If nodes have additional disks (e.g., for Ceph storage), wipe them before use. The `talosctl reset --wipe-mode all` only wipes the system disk, not additional disks.
+
+Wait for nodes to finish booting after config apply, then verify which disks are present:
+```bash
+talosctl -n 10.42.0.101 get disks
+```
+
+Wipe any non-system disks (e.g., NVMe drives for Ceph):
+```bash
+# Wipe on all nodes (adjust device names as needed)
+talosctl -n 10.42.0.101 wipe disk /dev/nvme1n1
+talosctl -n 10.42.0.102 wipe disk /dev/nvme1n1
+talosctl -n 10.42.0.103 wipe disk /dev/nvme1n1
+```
+
+> **Note**: The `wipe disk` command only works on running nodes, not in maintenance mode. It will refuse to wipe disks that are in use as system volumes.
+
+### 7. Bootstrap etcd
 
 > **Important**: Only run this on the first control plane. Other nodes join automatically.
 
@@ -92,7 +111,7 @@ You should see `etcd` with `STATE: Running` and `HEALTH: OK`.
 
 > **Tip**: `just bm bootstrap` does the same thing but auto-selects the first control plane IP.
 
-### 7. Fetch Kubeconfig
+### 8. Fetch Kubeconfig
 
 ```bash
 talosctl -n 10.42.0.101 kubeconfig clusters/m720q/talos/clusterconfig/kubeconfig
@@ -106,7 +125,7 @@ kubectl get nodes
 
 > **Tip**: `just bm kubeconfig` does the same thing.
 
-### 8. Install Cilium CNI
+### 9. Install Cilium CNI
 
 > **Important**: Nodes won't become `Ready` without a CNI. Flux needs `Ready` nodes to deploy, creating a chicken-and-egg problem. Install Cilium manually first.
 
@@ -119,7 +138,7 @@ Wait for nodes to become `Ready`:
 kubectl get nodes -w
 ```
 
-### 9. Approve Kubelet CSRs
+### 10. Approve Kubelet CSRs
 
 You may see TLS errors in dmesg:
 ```
@@ -134,7 +153,7 @@ kubectl get csr --no-headers | grep Pending | awk '{print $1}' | xargs kubectl c
 
 > **Note**: After Flux deploys `kubelet-csr-approver`, future CSRs will be auto-approved.
 
-### 10. Bootstrap Flux
+### 11. Bootstrap Flux
 
 ```bash
 just flux bootstrap
@@ -145,7 +164,7 @@ Flux will:
 - Deploy all infrastructure components
 - Take over Cilium management (via HelmRelease)
 
-### 11. Verify
+### 12. Verify
 
 ```bash
 just flux status
