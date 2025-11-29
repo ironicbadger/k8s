@@ -16,7 +16,7 @@ spec:
   dependsOn:
     - name: rook-ceph-operator
   healthChecks:
-    - apiVersion: apps/v1
-      kind: Deployment
-      name: rook-ceph-operator
+    - apiVersion: ceph.rook.io/v1
+      kind: CephCluster
+      name: rook-ceph
       namespace: rook-ceph
