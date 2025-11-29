@@ -10,8 +10,14 @@ spec:
     config:
       inCluster: false
       # Disable OIDC - auth handled by Tailscale identity via API proxy
+      # Must null out base values to prevent OIDC args from being rendered
       oidc:
-        enabled: false
+        clientID: ""
+        clientSecret: ""
+        issuerURL: ""
+        scopes: ""
+        secret:
+          create: false
         externalSecret:
           enabled: false
     # Mount kubeconfig pointing to Tailscale API proxy
