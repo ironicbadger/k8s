@@ -6,5 +6,6 @@ resources:
   - ../../../base/kubelet-csr-approver
   - ../../../base/metrics-server
   - ../../../base/tailscale
+  - ../../../base/tailscale-dns
   - headlamp
   - tailscale

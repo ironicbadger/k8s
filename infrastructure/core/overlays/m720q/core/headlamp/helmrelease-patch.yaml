@@ -6,6 +6,21 @@ metadata:
   namespace: headlamp
 spec:
   values:
+    # Disable in-cluster auth - use external kubeconfig via Tailscale API proxy
     config:
+      inCluster: false
+      # Disable OIDC - auth handled by Tailscale identity via API proxy
       oidc:
-        callbackURL: https://m720q-headlamp.ktz.ts.net/oidc-callback
+        enabled: false
+    # Mount kubeconfig pointing to Tailscale API proxy
+    env:
+      - name: KUBECONFIG
+        value: /kubeconfig/config
+    volumeMounts:
+      - name: kubeconfig
+        mountPath: /kubeconfig
+        readOnly: true
+    volumes:
+      - name: kubeconfig
+        secret:
+          secretName: headlamp-kubeconfig
