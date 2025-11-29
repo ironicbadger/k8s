@@ -5,3 +5,5 @@ resources:
   - ../../../../base/headlamp
   - headlamp-oidc-secret.sops.yaml
   - ingress.yaml
+patches:
+  - path: helmrelease-patch.yaml

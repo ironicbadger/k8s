@@ -29,6 +29,7 @@ spec:
       oidc:
         issuerURL: https://idp.ktz.ts.net
         scopes: "openid profile email"
+        # callbackURL set in overlay
         secret:
           create: false
         externalSecret:

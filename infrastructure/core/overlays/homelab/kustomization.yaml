@@ -8,3 +8,5 @@ resources:
   - headlamp-oidc-secret.sops.yaml
   - tailscale-secret.sops.yaml
   - tailscale-helmrelease.yaml
+patches:
+  - path: headlamp-helmrelease-patch.yaml
