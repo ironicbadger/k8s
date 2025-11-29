@@ -11,7 +11,7 @@ spec:
     branch: feature/tailscale-operator
   secretRef:
     name: flux-system
-  url: ssh://git@ssh.github.com:443/ironicbadger/k8s
+  url: ssh://git@github.com/ironicbadger/k8s
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization

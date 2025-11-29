@@ -11,7 +11,6 @@ spec:
     name: flux-system
   path: ./infrastructure/core/overlays/m720q/rook-ceph-cluster
   prune: true
-  wait: true
-  timeout: 10m0s
+  wait: false
   dependsOn:
     - name: rook-ceph-operator
