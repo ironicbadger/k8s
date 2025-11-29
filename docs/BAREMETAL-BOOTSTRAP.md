@@ -34,11 +34,9 @@ Via PiKVM:
 2. Boot each node
 3. Wait for nodes to get DHCP addresses
 
-Verify nodes are reachable:
+Verify Talos API is reachable on all nodes:
 ```bash
-ping 10.42.0.101
-ping 10.42.0.102
-ping 10.42.0.103
+talosctl -n 10.42.0.101,10.42.0.102,10.42.0.103 version --insecure
 ```
 
 ### 4. Apply Configs
@@ -58,28 +56,55 @@ just bm apply m720q-3 --insecure
 
 Nodes will reboot and apply their configuration.
 
-### 5. Bootstrap etcd
+### 5. Set Talos Config
+
+```bash
+export TALOSCONFIG=$(pwd)/clusters/m720q/talos/clusterconfig/talosconfig
+```
+
+### 6. Bootstrap etcd
 
 > **Important**: Only run this on the first control plane. Other nodes join automatically.
 
+First, verify Talos is ready for bootstrap:
 ```bash
-just bm bootstrap
+talosctl -n 10.42.0.101 dmesg | grep -i bootstrap
 ```
 
-Wait ~60 seconds for the Kubernetes API server to start.
+You're ready when you see:
+```
+user: warning: [...]: [talos] etcd is waiting to join the cluster, if this is the first node please run `talosctl bootstrap`
+```
 
-### 6. Fetch Kubeconfig
+Then run:
+```bash
+talosctl -n 10.42.0.101 bootstrap
+```
+
+Verify etcd is running:
+```bash
+talosctl -n 10.42.0.101 service
+```
+
+You should see `etcd` with `STATE: Running` and `HEALTH: OK`.
+
+> **Tip**: `just bm bootstrap` does the same thing but auto-selects the first control plane IP.
+
+### 7. Fetch Kubeconfig
 
 ```bash
-just bm kubeconfig
+talosctl -n 10.42.0.101 kubeconfig clusters/m720q/talos/clusterconfig/kubeconfig
+export KUBECONFIG=$(pwd)/clusters/m720q/talos/clusterconfig/kubeconfig
 ```
 
 Verify nodes are visible (they will show `NotReady` - this is expected):
 ```bash
-KUBECONFIG=clusters/m720q/talos/clusterconfig/kubeconfig kubectl get nodes
+kubectl get nodes
 ```
 
-### 7. Install Cilium CNI
+> **Tip**: `just bm kubeconfig` does the same thing.
+
+### 8. Install Cilium CNI
 
 > **Important**: Nodes won't become `Ready` without a CNI. Flux needs `Ready` nodes to deploy, creating a chicken-and-egg problem. Install Cilium manually first.
 
@@ -89,33 +114,27 @@ just bm cilium
 
 Wait for nodes to become `Ready`:
 ```bash
-KUBECONFIG=clusters/m720q/talos/clusterconfig/kubeconfig kubectl get nodes -w
+kubectl get nodes -w
 ```
 
-### 8. Approve Kubelet CSRs
+### 9. Approve Kubelet CSRs
 
 You may see TLS errors in dmesg:
 ```
 tls: internal error
 ```
 
-This indicates pending Certificate Signing Requests. Check and approve them:
+This indicates pending Certificate Signing Requests. Approve all pending CSRs:
 
 ```bash
-KUBECONFIG=clusters/m720q/talos/clusterconfig/kubeconfig kubectl get csr
-```
-
-Approve pending CSRs:
-```bash
-KUBECONFIG=clusters/m720q/talos/clusterconfig/kubeconfig kubectl certificate approve <csr-name-1> <csr-name-2> ...
+kubectl get csr --no-headers | grep Pending | awk '{print $1}' | xargs kubectl certificate approve
 ```
 
 > **Note**: After Flux deploys `kubelet-csr-approver`, future CSRs will be auto-approved.
 
-### 9. Bootstrap Flux
+### 10. Bootstrap Flux
 
 ```bash
-export KUBECONFIG=clusters/m720q/talos/clusterconfig/kubeconfig
 just flux bootstrap
 ```
 
@@ -124,7 +143,7 @@ Flux will:
 - Deploy all infrastructure components
 - Take over Cilium management (via HelmRelease)
 
-### 10. Verify
+### 11. Verify
 
 ```bash
 just flux status
@@ -159,20 +178,20 @@ just k watch
 
 ### Check Talos health
 ```bash
-TALOSCONFIG=clusters/m720q/talos/clusterconfig/talosconfig talosctl -n 10.42.0.101 health
+talosctl -n 10.42.0.101 health
 ```
 
 ### Watch Talos logs
 ```bash
-TALOSCONFIG=clusters/m720q/talos/clusterconfig/talosconfig talosctl -n 10.42.0.101 dmesg -f
+talosctl -n 10.42.0.101 dmesg -f
 ```
 
 ### Check etcd status
 ```bash
-TALOSCONFIG=clusters/m720q/talos/clusterconfig/talosconfig talosctl -n 10.42.0.101 etcd members
+talosctl -n 10.42.0.101 etcd members
 ```
 
 ### Check Cilium status
 ```bash
-KUBECONFIG=clusters/m720q/talos/clusterconfig/kubeconfig kubectl -n kube-system get pods -l app.kubernetes.io/name=cilium
+kubectl -n kube-system get pods -l app.kubernetes.io/name=cilium
 ```
