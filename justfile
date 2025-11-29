@@ -8,6 +8,7 @@ mod talos "scripts/just/talos.just"
 mod kubectl "scripts/just/kubectl.just"
 mod flux "scripts/just/flux.just"
 mod tailscale "scripts/just/tailscale.just"
+mod ceph "scripts/just/ceph.just"
 
 # Shorthand wrappers (can't alias modules directly)
 px *args:
