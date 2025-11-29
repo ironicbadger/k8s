@@ -5,5 +5,6 @@ resources:
   - ../../base/headlamp
   - ../../base/tailscale
   - headlamp-ingress.yaml
+  - headlamp-oidc-secret.sops.yaml
   - tailscale-secret.sops.yaml
   - tailscale-helmrelease.yaml

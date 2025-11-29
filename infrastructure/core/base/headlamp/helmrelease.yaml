@@ -25,3 +25,10 @@ spec:
   values:
     clusterRoleBinding:
       create: true
+    config:
+      oidc:
+        issuerURL: https://idp.ktz.ts.net
+        scopes: "openid profile email"
+        secret:
+          create: false
+          name: headlamp-oidc
