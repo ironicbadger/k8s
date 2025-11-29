@@ -2,7 +2,5 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-  - sources.yaml
-  - infrastructure.yaml
-  - rook-ceph-cluster.yaml
-  - tailscale-api-proxy.yaml
+  - flux-system
+  - flux-kustomizations

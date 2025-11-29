@@ -14,8 +14,7 @@ spec:
   wait: true
   timeout: 10m0s
   dependsOn:
-    - name: infrastructure
-  # Health checks to ensure operator CRDs are available
+    - name: rook-ceph-operator
   healthChecks:
     - apiVersion: apps/v1
       kind: Deployment

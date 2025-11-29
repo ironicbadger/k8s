@@ -9,7 +9,7 @@ spec:
   sourceRef:
     kind: GitRepository
     name: flux-system
-  path: ./infrastructure/core/overlays/m720q
+  path: ./infrastructure/core/overlays/m720q/monitoring
   prune: true
   wait: true
   timeout: 5m0s
@@ -18,4 +18,4 @@ spec:
     secretRef:
       name: sops-age
   dependsOn:
-    - name: sources
+    - name: infrastructure-core
