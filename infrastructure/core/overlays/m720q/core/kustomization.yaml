@@ -4,6 +4,7 @@ resources:
   - ../../../base/cilium
   - ../../../base/cert-manager
   - ../../../base/kubelet-csr-approver
+  - ../../../base/metrics-server
   - ../../../base/tailscale
   - headlamp
   - tailscale

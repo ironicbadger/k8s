@@ -5,6 +5,7 @@ resources:
   - headlamp.yaml
   - jetstack.yaml
   - kubelet-csr-approver.yaml
+  - metrics-server.yaml
   - prometheus-community.yaml
   - rook.yaml
   - tailscale.yaml
