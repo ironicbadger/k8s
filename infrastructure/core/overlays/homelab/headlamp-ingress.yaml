@@ -1,0 +1,18 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: headlamp
+  namespace: headlamp
+  annotations:
+    tailscale.com/tags: "tag:k8s,tag:k8s-homelab"
+spec:
+  ingressClassName: tailscale
+  defaultBackend:
+    service:
+      name: headlamp
+      port:
+        number: 80
+  tls:
+    - hosts:
+        - homelab-headlamp
