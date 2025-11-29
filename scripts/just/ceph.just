@@ -100,3 +100,17 @@ password:
     fi
     echo "User:      admin"
     echo "Password:  $PASSWORD (copied to clipboard)"
+
+# Run storage benchmark (deploys fio pod, runs tests, cleans up)
+[no-cd]
+benchmark:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    CLUSTER="{{_cluster}}"
+    KUBECONFIG="clusters/${CLUSTER}/talos/clusterconfig/kubeconfig"
+    if [[ ! -f "${KUBECONFIG}" ]]; then
+        echo "Error: kubeconfig not found for cluster '${CLUSTER}'"
+        exit 1
+    fi
+    export KUBECONFIG
+    exec scripts/ceph-benchmark.sh
