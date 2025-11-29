@@ -29,6 +29,8 @@ This generates:
 
 ### 3. Boot Nodes from Talos ISO
 
+TODO: Setup PXE booting?
+
 Via PiKVM:
 1. Mount Talos ISO
 2. Boot each node
@@ -166,6 +168,7 @@ just k watch
 
 | Issue | Solution |
 |-------|----------|
+| GitHub SSH timeouts in Flux | TODO: Use `ssh.github.com:443` instead of `github.com:22`. Requires adding `[ssh.github.com]:443` to known_hosts in flux-system secret and enabling SOPS decryption on flux-system Kustomization. |
 | `--insecure` flag forgotten | Required for fresh nodes without certificates |
 | etcd bootstrap on wrong node | Only run on first control plane; others join automatically |
 | Kubeconfig not found | Run `just bm kubeconfig` after bootstrap |
