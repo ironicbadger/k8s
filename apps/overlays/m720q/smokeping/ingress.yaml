@@ -1,0 +1,18 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: smokeping
+  namespace: smokeping
+  annotations:
+    tailscale.com/tags: "tag:k8s-m720q"
+spec:
+  ingressClassName: tailscale
+  defaultBackend:
+    service:
+      name: smokeping
+      port:
+        number: 80
+  tls:
+    - hosts:
+        - m720q-smokeping

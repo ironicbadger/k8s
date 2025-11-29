@@ -7,3 +7,4 @@ resources:
   - infrastructure.yaml
   - rook-ceph-operator.yaml
   - rook-ceph-cluster.yaml
+  - smokeping.yaml
