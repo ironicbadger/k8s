@@ -171,6 +171,12 @@ just flux status
 just k watch
 ```
 
+Talos dashboard is also v. useful and can be invoked via
+
+```bash
+just talos dashboard m720q-1,m720q-2,m720q-3
+```
+
 ## Command Reference
 
 | Command | Description |
