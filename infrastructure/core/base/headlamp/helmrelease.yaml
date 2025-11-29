@@ -31,4 +31,6 @@ spec:
         scopes: "openid profile email"
         secret:
           create: false
+        externalSecret:
+          enabled: true
           name: headlamp-oidc
