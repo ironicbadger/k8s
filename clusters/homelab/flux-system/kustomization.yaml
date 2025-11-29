@@ -5,3 +5,4 @@ resources:
   - ../../common/bootstrap/flux
   # Cluster-specific sync configuration
   - gotk-sync.yaml
+  - flux-system-secret.sops.yaml
