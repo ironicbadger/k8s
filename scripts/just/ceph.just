@@ -6,7 +6,7 @@ set shell := ["bash", "-euo", "pipefail", "-c"]
 
 _cluster := env_var_or_default("JUST_BM_CLUSTER", env_var_or_default("cluster", "homelab"))
 
-# Show cluster status (health, capacity, versions)
+# Show cluster status (health, capacity)
 [no-cd]
 status:
     #!/usr/bin/env bash
@@ -18,28 +18,22 @@ status:
         exit 1
     fi
     export KUBECONFIG
+
+    kubectl -n rook-ceph get cephcluster rook-ceph
+    echo ""
+
     STATUS=$(kubectl -n rook-ceph get cephcluster rook-ceph -o json)
+    # Get replication factor from first block pool (default 3)
+    REPL=$(kubectl -n rook-ceph get cephblockpool -o jsonpath='{.items[0].spec.replicated.size}' 2>/dev/null || echo "3")
 
-    echo "=== Ceph Cluster Status ==="
-    echo ""
-    HEALTH=$(echo "$STATUS" | jq -r '.status.ceph.health')
-    STATE=$(echo "$STATUS" | jq -r '.status.state')
-    PHASE=$(echo "$STATUS" | jq -r '.status.phase')
-    echo "Health: $HEALTH"
-    echo "State:  $STATE ($PHASE)"
-    echo ""
-
-    echo "=== Capacity ==="
+    echo "=== Capacity (${REPL}x replication) ==="
     TOTAL=$(echo "$STATUS" | jq -r '.status.ceph.capacity.bytesTotal')
     USED=$(echo "$STATUS" | jq -r '.status.ceph.capacity.bytesUsed')
     AVAIL=$(echo "$STATUS" | jq -r '.status.ceph.capacity.bytesAvailable')
-    printf "Total: %s\n" "$(numfmt --to=iec-i --suffix=B $TOTAL 2>/dev/null || echo "${TOTAL} bytes")"
-    printf "Used:  %s\n" "$(numfmt --to=iec-i --suffix=B $USED 2>/dev/null || echo "${USED} bytes")"
-    printf "Avail: %s\n" "$(numfmt --to=iec-i --suffix=B $AVAIL 2>/dev/null || echo "${AVAIL} bytes")"
-    echo ""
-
-    echo "=== Components ==="
-    echo "$STATUS" | jq -r '.status.ceph.versions | to_entries[] | select(.key != "overall") | "\(.key): \(.value | keys[0] | split(" ")[2])"'
+    USABLE=$((AVAIL / REPL))
+    printf "Raw:    %s\n" "$(numfmt --to=iec-i --suffix=B $TOTAL 2>/dev/null || echo "${TOTAL} bytes")"
+    printf "Usable: %s\n" "$(numfmt --to=iec-i --suffix=B $USABLE 2>/dev/null || echo "${USABLE} bytes")"
+    printf "Used:   %s\n" "$(numfmt --to=iec-i --suffix=B $USED 2>/dev/null || echo "${USED} bytes")"
 
 # Show health warnings/errors
 [no-cd]
