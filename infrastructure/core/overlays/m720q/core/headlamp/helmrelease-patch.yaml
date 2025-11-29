@@ -12,6 +12,8 @@ spec:
       # Disable OIDC - auth handled by Tailscale identity via API proxy
       oidc:
         enabled: false
+        externalSecret:
+          enabled: false
     # Mount kubeconfig pointing to Tailscale API proxy
     env:
       - name: KUBECONFIG
