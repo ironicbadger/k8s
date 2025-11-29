@@ -40,22 +40,13 @@ spec:
   crashCollector:
     disable: false
 
+  # Storage config defined in cluster-specific overlays
   storage:
     useAllNodes: false
     useAllDevices: false
     config:
       osdsPerDevice: "1"
-    # Per-node device config - Samsung NVMe data disks have different paths per node
-    nodes:
-      - name: m720q-1
-        devices:
-          - name: nvme0n1  # Samsung MZVKW512HMJP
-      - name: m720q-2
-        devices:
-          - name: nvme1n1  # Samsung SSD 970 PRO
-      - name: m720q-3
-        devices:
-          - name: nvme1n1  # Samsung SSD 970 PRO
+    nodes: []
 
   resources:
     mgr:

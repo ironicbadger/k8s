@@ -14,3 +14,20 @@ patches:
       - op: replace
         path: /spec/tls/0/hosts/0
         value: m720q-ceph
+  # m720q cluster storage - using stable by-id paths for Samsung NVMe data disks
+  - target:
+      kind: CephCluster
+      name: rook-ceph
+    patch: |
+      - op: replace
+        path: /spec/storage/nodes
+        value:
+          - name: m720q-1
+            devices:
+              - name: /dev/disk/by-id/nvme-SAMSUNG_MZVKW512HMJP-000L7_S35BNX0K509438
+          - name: m720q-2
+            devices:
+              - name: /dev/disk/by-id/nvme-Samsung_SSD_970_PRO_512GB_S463NF0M608301A
+          - name: m720q-3
+            devices:
+              - name: /dev/disk/by-id/nvme-Samsung_SSD_970_PRO_512GB_S463NF0M304366J
