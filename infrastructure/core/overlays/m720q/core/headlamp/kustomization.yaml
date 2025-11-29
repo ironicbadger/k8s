@@ -4,6 +4,7 @@ kind: Kustomization
 resources:
   - ../../../../base/headlamp
   - kubeconfig-secret.yaml
+  - api-proxy-egress.yaml
   - ingress.yaml
 patches:
   - path: helmrelease-patch.yaml

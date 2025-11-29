@@ -1,0 +1,17 @@
+---
+# Egress Service to expose the Tailscale API proxy to cluster pods
+# This allows Headlamp to reach the API proxy via cluster DNS
+apiVersion: v1
+kind: Service
+metadata:
+  name: k8s-api-proxy
+  namespace: headlamp
+  annotations:
+    tailscale.com/tailnet-fqdn: m720q-k8s-api.ktz.ts.net
+spec:
+  type: ExternalName
+  externalName: placeholder  # Will be updated by Tailscale operator
+  ports:
+    - port: 443
+      protocol: TCP
+      name: https
