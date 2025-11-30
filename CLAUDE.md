@@ -188,6 +188,14 @@ Defined in `infrastructure/sources/`:
 - **prometheus-community**: Prometheus charts
 - **rook**: https://charts.rook.io
 
+## Talosctl
+
+**IMPORTANT**: Set TALOSCONFIG before running talosctl commands:
+```bash
+export TALOSCONFIG=/Users/alex/git/ib/k8s/clusters/m720q/talos/clusterconfig/talosconfig
+talosctl -n 10.42.0.102 dmesg       # Example: check dmesg on node 2
+```
+
 ## Just Commands
 
 ```bash
