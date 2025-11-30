@@ -2,6 +2,52 @@
 
 Step-by-step guide for bootstrapping the m720q bare metal Talos cluster from freshly wiped disks.
 
+## Bootstrap Sequence
+
+```mermaid
+sequenceDiagram
+    participant Admin
+    participant Talhelper
+    participant PiKVM
+    participant Nodes as Talos Nodes
+    participant K8s as Kubernetes API
+    participant Flux
+
+    Admin->>Talhelper: just bm confgen
+    Talhelper-->>Admin: Generated configs
+
+    Admin->>PiKVM: Mount Talos ISO
+    PiKVM->>Nodes: Boot from ISO
+    Nodes-->>Admin: DHCP addresses assigned
+
+    Admin->>Nodes: just bm apply-all --insecure
+    Nodes->>Nodes: Apply config & reboot
+
+    Admin->>Nodes: talosctl wipe disk (non-system)
+
+    Admin->>Nodes: talosctl bootstrap (first node)
+    Nodes->>Nodes: Initialize etcd
+    Nodes->>Nodes: Start Kubernetes API
+    Nodes-->>Admin: Cluster ready
+
+    Admin->>K8s: just bm kubeconfig
+    K8s-->>Admin: kubeconfig fetched
+
+    Note over Nodes,K8s: Nodes show NotReady (no CNI)
+
+    Admin->>K8s: just bm cilium
+    K8s->>Nodes: Deploy Cilium CNI
+    Nodes-->>K8s: Nodes become Ready
+
+    Admin->>K8s: Approve pending CSRs
+
+    Admin->>Flux: just flux bootstrap
+    Flux->>K8s: Deploy infrastructure
+    Flux->>K8s: Take over Cilium management
+
+    Note over K8s,Flux: Cluster fully operational
+```
+
 ## Prerequisites
 
 - Talos ISO available (boot via PiKVM)
