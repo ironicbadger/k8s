@@ -8,3 +8,4 @@ resources:
   - rook-ceph-operator.yaml
   - rook-ceph-cluster.yaml
   - smokeping.yaml
+  - jellyfin.yaml
