@@ -8,3 +8,6 @@ creation_rules:
   - path_regex: infrastructure/.*\.sops\.yaml$
     age: age1helw9qcwl8lfy8xwm5cecnn2ljxlafhlplg3dehpk7ma4l94695qmqm9zg
     pgp: 6636CBF9CE1DE1A8
+  - path_regex: apps/.*\.sops\.yaml$
+    age: age1helw9qcwl8lfy8xwm5cecnn2ljxlafhlplg3dehpk7ma4l94695qmqm9zg
+    pgp: 6636CBF9CE1DE1A8

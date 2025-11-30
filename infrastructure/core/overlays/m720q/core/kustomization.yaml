@@ -3,8 +3,11 @@ kind: Kustomization
 resources:
   - ../../../base/cilium
   - ../../../base/cert-manager
+  - ../../../base/csi-driver-smb
+  - ../../../base/intel-device-plugins
   - ../../../base/kubelet-csr-approver
   - ../../../base/metrics-server
+  - ../../../base/node-feature-discovery
   - ../../../base/tailscale
   - headlamp
   - tailscale
