@@ -16,7 +16,6 @@ spec:
         namespace: flux-system
       interval: 12h
   install:
-    createNamespace: true
     crds: Create
     remediation:
       retries: 3
@@ -44,7 +43,6 @@ spec:
         namespace: flux-system
       interval: 12h
   install:
-    createNamespace: true
     remediation:
       retries: 3
   upgrade:
