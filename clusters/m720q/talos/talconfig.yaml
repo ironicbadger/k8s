@@ -47,6 +47,12 @@ nodes:
         dhcp: true
 
 controlPlane:
+  schematic:
+    customization:
+      systemExtensions:
+        officialExtensions:
+          - siderolabs/i915
+          - siderolabs/intel-ucode
   patches:
     - |-
       cluster:
