@@ -39,10 +39,8 @@ spec:
             requests:
               memory: "512Mi"
               cpu: "500m"
-              gpu.intel.com/i915: "1"
             limits:
               memory: "4Gi"
-              gpu.intel.com/i915: "1"
           securityContext:
             privileged: false
       volumes:
