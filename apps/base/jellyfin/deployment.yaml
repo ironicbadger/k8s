@@ -42,7 +42,7 @@ spec:
             limits:
               memory: "4Gi"
           securityContext:
-            privileged: false
+            privileged: true
       volumes:
         - name: config
           persistentVolumeClaim:
