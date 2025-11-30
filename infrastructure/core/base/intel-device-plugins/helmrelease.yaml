@@ -50,3 +50,5 @@ spec:
       retries: 3
   values:
     sharedDevNum: 10
+    nodeSelector:
+      feature.node.kubernetes.io/pci-0300_8086.present: "true"

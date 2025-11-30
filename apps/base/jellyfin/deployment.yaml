@@ -17,7 +17,7 @@ spec:
         app: jellyfin
     spec:
       nodeSelector:
-        gpu.intel.com/device-id.0300-3e92.present: "true"
+        feature.node.kubernetes.io/pci-0300_8086.present: "true"
       containers:
         - name: jellyfin
           image: jellyfin/jellyfin:latest
