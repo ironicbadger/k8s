@@ -2,10 +2,38 @@
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
+  name: intel-device-plugins-operator
+  namespace: intel-device-plugins
+spec:
+  interval: 30m
+  chart:
+    spec:
+      chart: intel-device-plugins-operator
+      version: "0.31.x"
+      sourceRef:
+        kind: HelmRepository
+        name: intel
+        namespace: flux-system
+      interval: 12h
+  install:
+    createNamespace: true
+    crds: Create
+    remediation:
+      retries: 3
+  upgrade:
+    crds: CreateReplace
+    remediation:
+      retries: 3
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
   name: intel-device-plugins-gpu
   namespace: intel-device-plugins
 spec:
   interval: 30m
+  dependsOn:
+    - name: intel-device-plugins-operator
   chart:
     spec:
       chart: intel-device-plugins-gpu
@@ -23,5 +51,4 @@ spec:
     remediation:
       retries: 3
   values:
-    nodeFeatureRule: true
     sharedDevNum: 10
