@@ -8,24 +8,23 @@ Users authenticate via Tailscale IDP (`idp.ktz.ts.net`) which is exposed via Tai
 
 ## Architecture
 
-```
-┌─────────────┐     ┌──────────────────┐     ┌─────────────────┐
-│   Browser   │────▶│     Headlamp     │────▶│  K8s API Server │
-└─────────────┘     └──────────────────┘     └─────────────────┘
-       │                    │                        │
-       │                    │                        │
-       ▼                    ▼                        ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    Tailscale IDP                            │
-│                  (idp.ktz.ts.net)                           │
-│                                                             │
-│  1. User clicks "Sign in" in Headlamp                       │
-│  2. Redirects to Tailscale IDP for authentication           │
-│  3. IDP returns OIDC token with user claims                 │
-│  4. Headlamp passes token to K8s API                        │
-│  5. API server validates token (configured via Talos)       │
-│  6. RBAC determines user permissions based on email         │
-└─────────────────────────────────────────────────────────────┘
+```mermaid
+sequenceDiagram
+    participant User as Browser
+    participant HL as Headlamp
+    participant IDP as Tailscale IDP<br/>(idp.ktz.ts.net)
+    participant API as K8s API Server
+
+    User->>HL: 1. Click "Sign in"
+    HL->>IDP: 2. Redirect to OIDC authorize
+    IDP->>User: 3. Tailscale login prompt
+    User->>IDP: 4. Authenticate
+    IDP->>HL: 5. Return OIDC token (email, tags)
+    HL->>API: 6. API request with token
+    API->>API: 7. Validate token (oidc-issuer-url)
+    API->>API: 8. RBAC check (email → ClusterRoleBinding)
+    API->>HL: 9. Return data
+    HL->>User: 10. Display dashboard
 ```
 
 ## Configuration Components
