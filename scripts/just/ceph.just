@@ -76,10 +76,6 @@ osd:
 
     echo "=== OSD Pods ==="
     kubectl -n rook-ceph get pods -l app=rook-ceph-osd -o wide
-    echo ""
-
-    echo "=== OSD Storage Info ==="
-    kubectl -n rook-ceph get cephcluster rook-ceph -o json | jq -r '.status.storage'
 
 # Get dashboard admin password and copy to clipboard
 [no-cd]
