@@ -31,7 +31,7 @@ nodes:
     disableSearchDomain: true
     networkInterfaces:
       - deviceSelector:
-          driver: mlx4_en          # Mellanox ConnectX-3
+          driver: mlx4_core        # Mellanox ConnectX-3
         dhcp: true
 
   - hostname: m720q-3
