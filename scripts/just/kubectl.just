@@ -74,3 +74,44 @@ config:
     @echo "export KUBECONFIG=clusters/{{_cluster}}/talos/clusterconfig/kubeconfig" | pbcopy
     @echo "Copied to clipboard: export KUBECONFIG=clusters/{{_cluster}}/talos/clusterconfig/kubeconfig"
 
+# Run intel_gpu_top to monitor Intel GPU usage (for Jellyfin transcoding, etc)
+# Optional: specify node name to override auto-detection from jellyfin pod
+[no-cd]
+gpu-top node="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    CLUSTER="{{_cluster}}"
+    KUBECONFIG="clusters/${CLUSTER}/talos/clusterconfig/kubeconfig"
+    if [[ ! -f "${KUBECONFIG}" ]]; then
+        echo "Error: kubeconfig not found for cluster '${CLUSTER}'"
+        exit 1
+    fi
+    export KUBECONFIG
+    if [[ -n "{{node}}" ]]; then
+        NODE="{{node}}"
+    else
+        NODE=$(kubectl get pods -n jellyfin -l app=jellyfin -o jsonpath='{.items[0].spec.nodeName}')
+        if [[ -z "${NODE}" ]]; then
+            echo "Error: could not find jellyfin pod, specify node manually: just k gpu-top <node-name>"
+            exit 1
+        fi
+    fi
+    echo "Running intel_gpu_top on node: ${NODE}"
+    kubectl run gpu-debug -n jellyfin --rm -it --restart=Never \
+        --image=ghcr.io/ironicbadger/docker-intel-gpu-tools \
+        --overrides="{
+            \"spec\": {
+                \"nodeName\": \"${NODE}\",
+                \"containers\": [{
+                    \"name\": \"gpu-debug\",
+                    \"image\": \"ghcr.io/ironicbadger/docker-intel-gpu-tools\",
+                    \"command\": [\"intel_gpu_top\"],
+                    \"stdin\": true,
+                    \"tty\": true,
+                    \"securityContext\": {\"privileged\": true},
+                    \"volumeMounts\": [{\"name\": \"dri\", \"mountPath\": \"/dev/dri\"}]
+                }],
+                \"volumes\": [{\"name\": \"dri\", \"hostPath\": {\"path\": \"/dev/dri\"}}]
+            }
+        }"
+
