@@ -58,6 +58,12 @@ controlPlane:
         etcd:
           extraArgs:
             listen-metrics-urls: http://0.0.0.0:2381
+        apiServer:
+          extraArgs:
+            oidc-issuer-url: https://idp.ktz.ts.net
+            oidc-client-id: 2e09a32ffdd473139a41157d7bb7abd4
+            oidc-username-claim: email
+            oidc-groups-claim: tags
       machine:
         features:
           kubePrism:
