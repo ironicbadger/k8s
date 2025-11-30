@@ -1,13 +1,15 @@
 ---
 # Egress Service to expose the Tailscale API proxy to cluster pods
 # This allows Headlamp to reach the API proxy via cluster DNS
+# Uses VIP service IP since tailnet-fqdn only works for devices, not VIP services
 apiVersion: v1
 kind: Service
 metadata:
   name: k8s-api-proxy
   namespace: headlamp
   annotations:
-    tailscale.com/tailnet-fqdn: m720q-k8s-api.ktz.ts.net
+    # VIP service IP for svc:m720q-k8s-api (stable across replicas)
+    tailscale.com/tailnet-ip: "100.103.238.235"
     # Tags must match ACLs to allow communication with API proxy
     tailscale.com/tags: tag:k8s,tag:k8s-m720q
 spec:
