@@ -1,7 +1,7 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-  - ../../../base/cilium
+  - cilium
   - ../../../base/cert-manager
   - ../../../base/csi-driver-smb
   - ../../../base/intel-device-plugins
