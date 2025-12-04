@@ -1,0 +1,17 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: hubble-ui
+  namespace: kube-system
+  annotations:
+    tailscale.com/tags: "tag:k8s,tag:k8s-m720q"
+spec:
+  ingressClassName: tailscale
+  defaultBackend:
+    service:
+      name: hubble-ui
+      port:
+        number: 80
+  tls:
+    - hosts:
+        - m720q-hubble
